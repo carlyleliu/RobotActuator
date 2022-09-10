@@ -1,0 +1,4 @@
+zephyr_include_directories(design_patterns/Inc)
+zephyr_include_directories(Inc)
+
+add_subdirectory(design_patterns)

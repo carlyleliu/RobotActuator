@@ -1,0 +1,87 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2022 STMicroelectronics
+ */
+
+/ {
+    chosen {
+		zephyr,console = &usart1;
+		zephyr,shell-uart = &usart1;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		green_led: led_0 {
+			gpios = <&gpiob 2 GPIO_ACTIVE_LOW>;
+			label = "User LD1";
+		};
+        red_led: led_1 {
+			gpios = <&gpiob 12 GPIO_ACTIVE_LOW>;
+			label = "User LD2";
+		};
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+
+		green_pwm_led: green_pwm_led {
+			pwms = <&pwm2 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+	};
+
+	aliases {
+		led0 = &green_led;
+        led1 = &red_led;
+		pwm-led0 = &green_pwm_led;
+	};
+
+    timer_pwms{
+		compatible = "pwms-spec";
+		pwm_spec: pwms {
+			pwms = <&pwm1 1 50000 PWM_POLARITY_NORMAL>,
+				   <&pwm1 2 50000 PWM_POLARITY_NORMAL>,
+                   <&pwm1 3 50000 PWM_POLARITY_NORMAL>,
+                   <&pwm1 4 50000 PWM_POLARITY_NORMAL>;
+			pwm-names = "pwm1_ch1", "pwm1_ch2", "pwm1_ch3", "pwm1_ch4";
+		};
+	};
+};
+
+&spi1 {
+    cs-gpios = <&gpiob 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    status = "okay";
+    /*
+    icm-42688@0 {
+        compatible = "invensense,icm42688";
+        reg = <0x0>;
+        int-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
+        accel-hz = <1000>;
+        gyro-hz = <1000>;
+        accel-fs = <16>;
+        gyro-fs = <2000>;
+        spi-max-frequency = <12000000>;
+        status = "okay";
+    };
+    */
+};
+
+&pwm1 {
+	status = "okay";
+	pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch2_pa9 &tim1_ch3_pa10 &tim1_ch4_pa11>;
+	pinctrl-names = "default";
+};
+
+&pwm2 {
+	status = "okay";
+	pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch2_pa1>;
+	pinctrl-names = "default";
+};
+
+&pwm3 {
+	status = "okay";
+	pinctrl-0 = <&tim3_ch1_pb4 &tim3_ch2_pa4>;
+	pinctrl-names = "default";
+};

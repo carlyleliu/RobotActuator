@@ -1,33 +1,52 @@
 #include <dc_motor.hpp>
 #include <algorithm>
 
-/** @brief Motor control Init
+/** @brief Motor control construct
  *  @param None
  *  @return None
  */
-void DC_Motor::MotorInit(void)
+DcMotor::DcMotor() :
+    MotorAbstract(),
+    positive_pwm_(0),
+    negative_pwm_(0)
 {
+    motor_control_type_ = MOTOR_CONTROL_TYPE_SPEES;
     positive_pwm_ = 0;
+
+    /* Nothiong to do
+    fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, STATE_INIT_EVENT) = [&](const Fsm::fsm_args &args) {
+    };
+    fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, STATE_EXIT_EVENT) = [&](const Fsm::fsm_args &args) {
+    };
+
+    fsm_.Bind(MOTOR_CONTROL_TYPE_SPEES, STATE_INIT_EVENT) = [&](const Fsm::fsm_args &args) {
+    };
+    fsm_.Bind(MOTOR_CONTROL_TYPE_SPEES, STATE_EXIT_EVENT) = [&](const Fsm::fsm_args &args) {
+    };
+    */
+
+    fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, MOTOR_CONTROL_EVENT_SET_SPEES) = [&](const Fsm::fsm_args &args) {
+        ExecuteSpeedControl();
+    };
+    fsm_.Bind(MOTOR_CONTROL_TYPE_SPEES, MOTOR_CONTROL_EVENT_SET_IDLE) = [&](const Fsm::fsm_args &args) {
+        MotorStop();
+    };
 }
 
-/** @brief Motor control DeInit
+/** @brief Motor control destory
  *  @param None
  *  @return None
  */
-void DC_Motor::MotorDeInit(void)
+DcMotor::~DcMotor()
 {
-    run_ = 0;
-    positive_pwm_ = 0;
-    positive_pwm_.Reset();
-    negative_pwm_ = 0;
-    negative_pwm_.Reset();
+    MotorStop();
 }
 
 /** @brief Motor control Start
  *  @param None
  *  @return None
  */
-void DC_Motor::MotorStart(void)
+void DcMotor::MotorStart(void)
 {
     run_ = 1;
 }
@@ -36,9 +55,10 @@ void DC_Motor::MotorStart(void)
  *  @param None
  *  @return None
  */
-void DC_Motor::MotorStop(void)
+void DcMotor::MotorStop(void)
 {
     run_ = 0;
+
     positive_pwm_ = 0;
     positive_pwm_.Reset();
     negative_pwm_ = 0;
@@ -49,19 +69,10 @@ void DC_Motor::MotorStop(void)
  *  @param None
  *  @return None
  */
-void DC_Motor::MotorTask(void)
+void DcMotor::MotorTask(uint64_t timestamp)
 {
     if (!run_) {
         return;
-    }
-
-    /* only support MOTOR_CONTROL_TYPE_SPEES and MOTOR_CONTROL_TYPE_POSITIONcontrol mode */
-    if(MOTOR_CONTROL_TYPE_SPEES == motor_control_type_) {
-        ExecuteSpeedControl();
-    } else if (MOTOR_CONTROL_TYPE_POSITION == motor_control_type_) {
-        MotorStop();
-    } else {
-        MotorStop();
     }
 }
 
@@ -69,11 +80,12 @@ void DC_Motor::MotorTask(void)
  *  @param None
  *  @return None
  */
-void DC_Motor::ExecuteSpeedControl(void)
+void DcMotor::ExecuteSpeedControl(void)
 {
     constexpr float one = 1.0f;
     float delta_speed = target_speed_ - actual_speed_;
     float out = pid_controller_.PIDController(delta_speed);
+
     if (out > 0) {
         positive_pwm_ = std::clamp(out, -one, one);
         negative_pwm_ = 0;

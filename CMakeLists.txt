@@ -19,7 +19,7 @@ set(DEVICE_PATH device)
 set(MIDDLEWARE_PATH middleware)
 
 add_subdirectory(util)
-#add_subdirectory(device)
+add_subdirectory(device)
 add_subdirectory(middleware)
 # add_subdirectory(test)
 

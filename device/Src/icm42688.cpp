@@ -8,7 +8,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/sensor.h>
 
-LOG_MODULE_REGISTER(icm42688, 4);
+LOG_MODULE_REGISTER(ICM42688, CONFIG_SENSOR_LOG_LEVEL);
 
 #ifdef CONFIG_ICM42688_TRIGGER
 static struct sensor_trigger trigger;

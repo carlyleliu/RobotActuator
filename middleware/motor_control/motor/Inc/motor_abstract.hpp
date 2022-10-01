@@ -9,6 +9,7 @@
 
 #include <component_port.hpp>
 #include <pid_controller.hpp>
+#include <fsm.hpp>
 
 class PidController;
 
@@ -28,11 +29,22 @@ enum MotorType
 
 enum MotorControlType
 {
-    MOTOR_CONTROL_TYPE_OL = 0,
+    MOTOR_CONTROL_TYPE_IDLE = 0,
+    MOTOR_CONTROL_TYPE_OL,
     MOTOR_CONTROL_TYPE_SPEES,
     MOTOR_CONTROL_TYPE_TORQUE,
     MOTOR_CONTROL_TYPE_POSITION,
     MOTOR_CONTROL_TYPE_NUM,
+};
+
+enum MotorControlEvent
+{
+    MOTOR_CONTROL_EVENT_SET_IDLE = MOTOR_CONTROL_TYPE_NUM + 1,
+    MOTOR_CONTROL_EVENT_SET_OL,
+    MOTOR_CONTROL_EVENT_SET_SPEES,
+    MOTOR_CONTROL_EVENT_SET_TORQUE,
+    MOTOR_CONTROL_EVENT_SET_POSITION,
+    MOTOR_CONTROL_EVENT_NUM,
 };
 
 class MotorAbstract
@@ -54,7 +66,7 @@ class MotorAbstract
         status_(0),
         fault_code_(0),
         run_(0) {};
-    ~MotorAbstract(){};
+    virtual ~MotorAbstract(){};
 
   public:
     enum MotorType GetType(void) { return motor_type_; };
@@ -78,12 +90,12 @@ class MotorAbstract
     void SetSpeed(float speed) { target_speed_ = std::clamp(speed, -max_speed_, max_speed_); };
     void SetPosition(float position) { target_position_ = std::clamp(position, -max_position_, max_position_); };
 
+    void SendMotorControlEvent(enum MotorControlEvent event) {fsm_.Event(event); };
+
   public:
-    virtual void MotorInit(void) = 0;
-    virtual void MotorDeInit(void) = 0;
     virtual void MotorStart(void) = 0;
     virtual void MotorStop(void) = 0;
-    virtual void MotorTask(void) = 0;
+    virtual void MotorTask(uint64_t timestamp) = 0;
 
   protected:
     enum MotorType motor_type_;
@@ -108,6 +120,8 @@ class MotorAbstract
     uint32_t status_;
     uint32_t fault_code_;
     uint32_t run_;
+
+    Fsm::StateMachine fsm_;
 };
 
 #endif // !__MIDDLEWARE_MOTOR_CONTROL_MOTOR_ABSTRACR_HPP__

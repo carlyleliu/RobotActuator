@@ -113,15 +113,15 @@ private:
 template<typename T>
 class InputPort {
 public:
-    void Attach(OutputPort<T>* input_port) {
+    void ConnectTo(OutputPort<T>* input_port) {
         content_ = input_port;
     }
 
-    void Attach(T* input_ptr) {
+    void ConnectTo(T* input_ptr) {
         content_ = input_ptr;
     }
 
-    void DeAttach() {
+    void DisConnect() {
         content_ = (OutputPort<T>*)nullptr;
     }
 

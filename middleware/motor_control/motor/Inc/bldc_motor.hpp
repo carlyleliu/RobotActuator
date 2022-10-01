@@ -2,18 +2,29 @@
 #define __MIDDLEWARE_MOTOR_CONTROL_BLDC_MOTOR_HPP__
 
 #include <motor_abstract.hpp>
+#include <foc_controller.hpp>
+#include <open_loop_controller.hpp>
 
-class BLDC_Motor : public MotorAbstract
+class BldcMotor : public MotorAbstract
 {
   public:
-    BLDC_Motor();
-    ~BLDC_Motor();
+    BldcMotor();
+    ~BldcMotor();
 
-    void MotorInit(void) final;
-    void MotorDeInit(void) final;
     void MotorStart(void) final;
     void MotorStop(void) final;
     void MotorTask(uint64_t timestamp);
+    void Test(void);
+
+    FieldOrientedController& GetFocControllerHandle(void) { return foc_; };
+
+  private:
+    FieldOrientedController foc_;
+
+  public:
+    OutputPort<float> u_phase_pwm_;
+    OutputPort<float> v_phase_pwm_;
+    OutputPort<float> w_phase_pwm_;
 };
 
 

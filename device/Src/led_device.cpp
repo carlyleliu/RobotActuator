@@ -46,6 +46,7 @@ int LedInit(void)
             return ret;
         }
     }
+    return ret;
 }
 
 /**

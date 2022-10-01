@@ -8,6 +8,7 @@
 #include <st/g4/stm32g431Xb.dtsi>
 #include <st/g4/stm32g431r(6-8-b)tx-pinctrl.dtsi>
 #include "arduino_r3_connector.dtsi"
+#include <zephyr/dt-bindings/adc/adc.h>
 
 / {
 	model = "STMicroelectronics STM32G431CB board";
@@ -92,27 +93,6 @@
 	pwm1: pwm {
 		status = "okay";
 		pinctrl-0 = <&tim1_ch3_pe13>;
-		pinctrl-names = "default";
-	};
-};
-
-&timers2 {
-	status = "okay";
-
-	pwm2: pwm {
-		status = "okay";
-		pinctrl-0 = <&tim2_ch1_pa5>;
-		pinctrl-names = "default";
-	};
-};
-
-&timers3 {
-	st,prescaler = <1>;
-	status = "okay";
-
-	pwm3: pwm {
-		status = "okay";
-		pinctrl-0 = <&tim3_ch1_pb4>;
 		pinctrl-names = "default";
 	};
 };

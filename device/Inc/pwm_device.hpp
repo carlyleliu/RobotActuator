@@ -11,18 +11,21 @@
 #include <observer.hpp>
 #include <component_port.hpp>
 
-class PwmGeneration : public Observer
+using namespace DesignedPatterns;
+
+class ImplPwm : public Observer
 {
   public:
-    PwmGeneration(uint8_t array_idx);
-    ~PwmGeneration();
-    void Update(void) final;
+    ImplPwm() {};
+    ~ImplPwm() {};
+    void Init(uint8_t idx);
+    void Update(void);
     void Test(void);
 
   private:
-    InputPort<float> pwm_input_port_;
-    std::optional<float> normalize_pwm_;
     struct pwm_dt_spec* spec_;
+  public:
+    InputPort<float> pwm_input_port_;
 };
 
 #endif // ! __DEVICE_PWM_DEVICE_HPP__

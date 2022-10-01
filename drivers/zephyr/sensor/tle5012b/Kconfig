@@ -1,0 +1,16 @@
+# TLE5012B Six-Axis Motion Tracking device configuration options
+#
+# Copyright (c) 2022 Esco Medical ApS
+# Copyright (c) 2020 TDK Invensense
+#
+# SPDX-License-Identifier: Apache-2.0
+
+DT_COMPAT_TLE5012B := invensense,tle5012b
+
+menuconfig TLE5012B
+	bool "TLE5012B Six-Axis Motion Tracking Device"
+	default $(dt_compat_enabled,$(DT_COMPAT_TLE5012B))
+	depends on SPI
+	help
+	  Enable driver for TLE5012B SPI-based six-axis motion tracking device.
+

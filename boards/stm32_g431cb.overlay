@@ -26,16 +26,13 @@
 
 	pwmleds {
 		compatible = "pwm-leds";
-
-		green_pwm_led: green_pwm_led {
-			pwms = <&pwm2 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
-		};
 	};
 
 	aliases {
 		led0 = &green_led;
         led1 = &red_led;
-		pwm-led0 = &green_pwm_led;
+        qdec2 = &qdec2;
+        qdec3 = &qdec3;
 	};
 
     timer_pwms{
@@ -48,10 +45,16 @@
 			pwm-names = "pwm1_ch1", "pwm1_ch2", "pwm1_ch3", "pwm1_ch4";
 		};
 	};
+
+    zephyr,user {
+		/* adjust channel number according to pinmux in board.dts */
+		io-channels = <&adc1 1>, <&adc1 2>, <&adc1 3>;
+	};
+
 };
 
 &spi1 {
-    cs-gpios = <&gpiob 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    cs-gpios = <&gpioa 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
     status = "okay";
     /*
     icm-42688@0 {
@@ -66,6 +69,13 @@
         status = "okay";
     };
     */
+    tle5012b@0 {
+        compatible = "infineon,gmr";
+        reg = <0x0>;
+        spi-max-frequency = <8000000>;
+        resolution = <15>;
+        status = "okay";
+    };
 };
 
 &pwm1 {
@@ -74,14 +84,63 @@
 	pinctrl-names = "default";
 };
 
-&pwm2 {
+&timers2 {
 	status = "okay";
-	pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch2_pa1>;
-	pinctrl-names = "default";
+    qdec2: qdec {
+		status = "disabled";
+		pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch2_pa1>;
+		pinctrl-names = "default";
+		st,input-polarity-inverted;
+		st,input-filter-level = <15>;
+		st,counts-per-revolution = <16>;
+	};
 };
 
-&pwm3 {
+&timers3 {
+	st,prescaler = <1>;
 	status = "okay";
-	pinctrl-0 = <&tim3_ch1_pb4 &tim3_ch2_pa4>;
+
+    qdec3: qdec {
+		status = "disabled";
+		pinctrl-0 = <&tim3_ch1_pb4 &tim3_ch2_pa4>;
+		pinctrl-names = "default";
+		st,input-polarity-inverted;
+		st,input-filter-level = <15>;
+		st,counts-per-revolution = <16>;
+	};
+};
+
+&adc1 {
+	pinctrl-0 = <&adc1_in1_pa0 &adc1_in2_pa1 &adc1_in3_pa2>;
 	pinctrl-names = "default";
+	status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+        zephyr,oversampling = <4>;
+    };
+
+    channel@2 {
+		reg = <2>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+        zephyr,oversampling = <4>;
+    };
+
+    channel@3 {
+		reg = <3>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+        zephyr,oversampling = <4>;
+    };
 };

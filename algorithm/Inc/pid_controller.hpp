@@ -1,5 +1,5 @@
-#ifndef __MIDDLEWARE_ALGORITHM_PID_CONTROLLER_HPP__
-#define __MIDDLEWARE_ALGORITHM_PID_CONTROLLER_HPP__
+#ifndef __ALGORITHM_PID_CONTROLLER_HPP__
+#define __ALGORITHM_PID_CONTROLLER_HPP__
 
 #include <zephyr/kernel.h>
 
@@ -71,4 +71,4 @@ class PidController
     FloatPoint prev_process_var_error_;  /*< previous process variable used by the derivative part of the PID component */
 };
 
-#endif // ! __MIDDLEWARE_ALGORITHM_PID_CONTROLLER_HPP__
+#endif // ! __ALGORITHM_PID_CONTROLLER_HPP__

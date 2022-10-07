@@ -1,5 +1,5 @@
 #include <foc_controller.hpp>
-#include <algorithm_macro.hpp>
+#include <algorithm_utils.hpp>
 
 #include <arm_math.h>
 
@@ -87,8 +87,8 @@ void FieldOrientedController::FocPark(void)
  */
 void FieldOrientedController::FocRevPark(std::optional<float2D> v_dq)
 {
-    float theta = phase_target_external_.GetPresent().value() + phase_velocity_target_external_.GetPresent().value() * \
-                    ((control_timestamp_ - sensor_update_timestamp_) / US_TO_S);
+    float theta = phase_target_external_.GetPresent().value(); // + phase_velocity_target_external_.GetPresent().value() * \
+    //                ((control_timestamp_ - sensor_update_timestamp_) / US_TO_S);
 
     auto [mod_d, mod_q] = *v_dq;
 
@@ -284,10 +284,10 @@ void FieldOrientedController::Update(void)
 
     auto [tA, tB, tC, success] = FocSVM();
     if (success) {
-        pwm_phase_u_ = tA;
-        pwm_phase_v_ = tB;
+        pwm_phase_u_ = tB;
+        pwm_phase_v_ = tA;
         pwm_phase_w_ = tC;
     } else {
-        LOG_ERR("SVM failed\n");
+        LOG_ERR("SVM [%f %f %f]failed\n", tA, tB, tC);
     }
 }

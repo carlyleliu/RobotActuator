@@ -1,5 +1,5 @@
-#ifndef __MIDDLEWARE_ALGORITHM_FOC_CONTROLLER_HPP__
-#define __MIDDLEWARE_ALGORITHM_FOC_CONTROLLER_HPP__
+#ifndef __ALGORITHM_FOC_CONTROLLER_HPP__
+#define __ALGORITHM_FOC_CONTROLLER_HPP__
 
 #include <component_port.hpp>
 #include <pid_controller.hpp>
@@ -94,5 +94,5 @@ class FieldOrientedController
     OutputPort<float> pwm_phase_w_;
 };
 
-#endif // ! __MIDDLEWARE_ALGORITHM_FOC_CONTROLLER_HPP__
+#endif // ! __ALGORITHM_FOC_CONTROLLER_HPP__
 

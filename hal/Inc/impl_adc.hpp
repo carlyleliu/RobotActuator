@@ -1,5 +1,5 @@
-#ifndef __MIDDLEWARE_SENSOR_ADC_DEVICE_HPP__
-#define __MIDDLEWARE_SENSOR_ADC_DEVICE_HPP__
+#ifndef __DEVICE_IMPL_ADC_HPP__
+#define __DEVICE_IMPL_ADC_HPP__
 
 #include <zephyr/kernel.h>
 #include <sys/time.h>
@@ -13,14 +13,13 @@ union AdcValue
 };
 
 /* vbus temp current */
-
-class AdcDeviceAbstract
+class ImplAdc
 {
   public:
-    AdcDeviceAbstract() :
+    ImplAdc() :
         time_stamp_(0),
         adc_resolution_(12) {};
-    ~AdcDeviceAbstract();
+    ~ImplAdc();
 
     void SetDividerRatio(float ratio) { divider_ratio_ = ratio; };
     float GetDividerRatio(void) { return divider_ratio_; };
@@ -35,15 +34,16 @@ class AdcDeviceAbstract
 
     float GetChannelValue(void) { return value_; };
 
+    int64_t GetTicks(void) { return time_stamp_; };
+
     int Update(void);
     int Init(void);
 
   private:
-    uint64_t time_stamp_;
+    int64_t time_stamp_;
     uint16_t adc_channel_;
     uint16_t adc_resolution_;
     float divider_ratio_;
-
     float adc_reference_value_;
 
     AdcValue raw_value_;
@@ -53,5 +53,4 @@ class AdcDeviceAbstract
     struct adc_sequence sequence_;
 };
 
-#endif // ! __MIDDLEWARE_SENSOR_ADC_DEVICE_HPP__
-
+#endif // ! __DEVICE_IMPL_ADC_HPP__

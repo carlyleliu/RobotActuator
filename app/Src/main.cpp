@@ -4,10 +4,9 @@
 
 #include <motor_abstract.hpp>
 #include <bldc_motor.hpp>
-#include <adc_device.hpp>
 
-#include <pwm_device.hpp>
-#include <adc_device.hpp>
+#include <impl_pwm.hpp>
+#include <impl_adc.hpp>
 
 LOG_MODULE_REGISTER(Main, 7);
 
@@ -15,7 +14,7 @@ int main(void)
 {
 	printk("start main\n");
 
-    k_msleep(3000);
+    k_msleep(1000);
     uint64_t stamp;
     struct sensor_value angle;
     const struct device *const tle5012b_dev = DEVICE_DT_GET_ONE(infineon_gmr);
@@ -24,7 +23,7 @@ int main(void)
     OpenLoopController* open_loop_control_ptr = new(OpenLoopController);
 
     uint16_t channel = 0;
-    AdcDeviceAbstract current;
+    ImplAdc current;
     current.SetAdcChannel(channel);
     current.SetReferenceValue(3.3);
     current.SetDividerRatio(11);
@@ -55,23 +54,21 @@ int main(void)
     uint32_t time;
 
     while (1) {
-        k_busy_wait(1000000);
-        time = k_cycle_get_32();
-        printk("ticks = %d\n", time / 10000);
-        // stamp = k_uptime_get();
-        // open_loop_control_ptr->Reset();
-        // open_loop_control_ptr->Update(stamp);
-        // bldc_ptr->MotorTask(stamp);
-        // pwm0_ptr->Update();
-        // pwm1_ptr->Update();
-        // pwm2_ptr->Update();
-		// k_busy_wait(500000);
+        //k_busy_wait(500);
 
-        // sensor_sample_fetch(tle5012b_dev);
+        stamp = k_uptime_get();
+        open_loop_control_ptr->Reset();
+        open_loop_control_ptr->Update();
+        bldc_ptr->MotorTask(stamp);
+        pwm0_ptr->Update();
+        pwm1_ptr->Update();
+        pwm2_ptr->Update();
 
-        // sensor_channel_get(tle5012b_dev, SENSOR_CHAN_ALL, &angle);
+        sensor_sample_fetch(tle5012b_dev);
 
-        // current.Update();
+        sensor_channel_get(tle5012b_dev, SENSOR_CHAN_ALL, &angle);
+
+        current.Update();
 
 	}
 

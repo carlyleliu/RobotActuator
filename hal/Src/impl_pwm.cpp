@@ -1,10 +1,10 @@
-#include <pwm_device.hpp>
+#include <impl_pwm.hpp>
 
 /* define pwm channel num */
 constexpr uint8_t kPwmDeviceNum = 4;
 
 /* register logging module */
-LOG_MODULE_REGISTER(PWM, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(PWM, LOG_LEVEL_WRN);
 
 struct pwm_dt_spec kPwmSpec[kPwmDeviceNum] = {
     PWM_DT_SPEC_GET_BY_NAME(DT_NODELABEL(pwm_spec), pwm1_ch1),
@@ -17,19 +17,22 @@ struct pwm_dt_spec kPwmSpec[kPwmDeviceNum] = {
  * @brief init pwm device struct
  * @param idx channel num
  */
-void ImplPwm::Init(uint8_t idx)
+int ImplPwm::Init(uint8_t idx)
 {
     if (idx < kPwmDeviceNum) {
         spec_ = &kPwmSpec[idx];
         pwm_set_pulse_dt(spec_, 0);
+        return 0;
     }
+
+    return -1;
 }
 
 /** @brief Update pwm device
  *  @param None
  *  @return None
  */
-void ImplPwm::Update(void)
+int ImplPwm::Update(void)
 {
     uint32_t pwm_pulse;
 
@@ -40,6 +43,8 @@ void ImplPwm::Update(void)
         pwm_set_pulse_dt(spec_, pwm_pulse);
         LOG_DBG("pwm_pulse[%d]\n", pwm_pulse);
     }
+
+    return 0;
 }
 
 /** @brief Update pwm device

@@ -87,7 +87,7 @@
 };
 
 &timers1 {
-	st,prescaler = <1>;
+	st,prescaler = <0>;
 	status = "okay";
 
 	pwm1: pwm {

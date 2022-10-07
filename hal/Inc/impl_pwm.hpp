@@ -18,8 +18,8 @@ class ImplPwm : public Observer
   public:
     ImplPwm() {};
     ~ImplPwm() {};
-    void Init(uint8_t idx);
-    void Update(void);
+    int Init(uint8_t idx);
+    int Update(void);
     void Test(void);
 
   private:

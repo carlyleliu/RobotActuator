@@ -1,5 +1,5 @@
 #include <bldc_motor.hpp>
-#include <algorithm_macro.hpp>
+#include <algorithm_utils.hpp>
 
 LOG_MODULE_REGISTER(BldcMotorControl, 3);
 
@@ -141,13 +141,5 @@ void BldcMotor::MotorStop(void)
 
 void BldcMotor::MotorTask(uint64_t timestamp)
 {
-    //foc_.FocRevPark();
-    // auto [tA, tB, tC, success] = foc_.FocSVM();
-
-    // foc_.pwm_phase_u_ = tA;
-    // foc_.pwm_phase_v_ = tB;
-    // foc_.pwm_phase_w_ = tC;
-    // foc_.Update();
-
-    //LOG_DBG("phase_pwm[%f %f %f]\n", tA, tB, tC);
+    foc_.Update();
 }

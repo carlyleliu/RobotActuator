@@ -3,7 +3,7 @@
 
 #include <zephyr/kernel.h>
 #include <cmath>
-#include <algorithm_macro.hpp>
+#include <algorithm_utils.hpp>
 #include <algorithm>
 
 class AngleEncoderAbstract {

@@ -1,8 +1,8 @@
-#include <adc_device.hpp>
+#include <impl_adc.hpp>
 
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(ADC, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(ADC, LOG_LEVEL_WRN);
 
 static struct adc_dt_spec adc_channel[] = {
     ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0),
@@ -14,9 +14,9 @@ static struct adc_dt_spec adc_channel[] = {
  * @brief Init adc value
  *
  */
-int AdcDeviceAbstract::Init(void)
+int ImplAdc::Init(void)
 {
-    int err;
+    int err = 0;
 
     adc_spec_ = &adc_channel[adc_channel_];
     if (!device_is_ready(adc_spec_->dev)) {
@@ -32,21 +32,21 @@ int AdcDeviceAbstract::Init(void)
 
     sequence_.buffer = &raw_value_.adc_16bit_value_[0];
     sequence_.buffer_size = sizeof(raw_value_.adc_16bit_value_[0]);
-    // sequence_.resolution = adc_spec_->resolution;
-    // sequence_.oversampling = adc_spec_->oversampling;
 
     adc_sequence_init_dt(adc_spec_, &sequence_);
 
-    return 0;
+    return err;
 }
 
 /**
  * @brief Update adc value
  *
  */
-int AdcDeviceAbstract::Update(void)
+int ImplAdc::Update(void)
 {
-    int err;
+    int err = 0;
+
+    time_stamp_ = k_uptime_ticks();
 
     err = adc_read(adc_spec_->dev, &sequence_);
     if (err < 0) {
@@ -56,7 +56,7 @@ int AdcDeviceAbstract::Update(void)
     value_ = raw_value_.adc_16bit_value_[0] / GeRresolution() * \
                     GetReferenceValue() * GetDividerRatio();
 
-    LOG_ERR("ADC VALUE = %d", raw_value_.adc_16bit_value_[0]);
+    LOG_INF("ADC value = %d\n", raw_value_.adc_16bit_value_[0]);
 
-    return 0;
+    return err;
 }

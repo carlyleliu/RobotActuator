@@ -8,33 +8,40 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/sensor.h>
 
-LOG_MODULE_REGISTER(ICM42688, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(ICM42688, LOG_LEVEL_WRN);
 
-#ifdef CONFIG_ICM42688_TRIGGER
-static struct sensor_trigger trigger;
-#endif /* CONFIG_ICM42688_TRIGGER */
-
-static int ProcessIcm42688(const struct device *dev)
+/**
+ * @brief process imu data
+ *
+ * @return 0 if success and -1 failed
+ */
+int Icm42688::Process(void)
 {
 	struct sensor_value temperature = {0};
 	struct sensor_value accel[3] = {0};
 	struct sensor_value gyro[3] = {0};
-    int64_t now = k_uptime_get();
 
-	int rc = sensor_sample_fetch(dev);
+    time_stamp_ = k_uptime_ticks();
+
+	int rc = sensor_sample_fetch(dev_);
 
 	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
+		rc = sensor_channel_get(dev_, SENSOR_CHAN_ACCEL_XYZ, accel);
 	}
 	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
+		rc = sensor_channel_get(dev_, SENSOR_CHAN_GYRO_XYZ, gyro);
 	}
 	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
+		rc = sensor_channel_get(dev_, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
 	}
 	if (rc == 0) {
-		LOG_ERR("[%lld]:%g Cel  accel %f %f %f m/s/s  gyro  %f %f %f rad/s\n",
-		       now,
+        for (int idx = 0; idx < 3; idx++) {
+            accel_normalized_.at(idx) = sensor_value_to_double(&accel[idx]);
+            gyro_normalized_.at(idx) = sensor_value_to_double(&gyro[idx]);
+        }
+        temperature_ = sensor_value_to_double(&temperature);
+		LOG_INF("[%lld]:%g Cel  accel %f %f %f m/s/s  gyro  %f %f %f rad/s\n",
+		       time_stamp_,
 		       sensor_value_to_double(&temperature),
 		       sensor_value_to_double(&accel[0]),
 		       sensor_value_to_double(&accel[1]),
@@ -50,54 +57,73 @@ static int ProcessIcm42688(const struct device *dev)
 }
 
 #ifdef CONFIG_ICM42688_TRIGGER
-static void TriggerIcm42688(const struct device *dev,
-				const struct sensor_trigger *trig)
+int Icm42688::Trigger(void)
 {
-	int rc = ProcessIcm42688(dev);
+	int rc = Process(dev_);
 
 	if (rc != 0) {
-		printf("cancelling trigger due to failure: %d\n", rc);
-		(void)sensor_trigger_set(dev, trig, NULL);
-		return;
+		printk("cancelling trigger due to failure: %d\n", rc);
+		(void)sensor_trigger_set(dev_, trigger_, NULL);
 	}
+
+    return rc;
 }
 #endif /* CONFIG_ICM42688_TRIGGER */
 
-void Icm42688Init(void)
+/**
+ * @brief init imu sensor
+ *
+ * @return 0 if success and -1 failed
+ */
+int Icm42688::Init(void)
 {
-    const struct device *const icm42688_dev = DEVICE_DT_GET_ONE(invensense_icm42688);
+    dev_ = DEVICE_DT_GET_ONE(invensense_icm42688);
 
-    if (!device_is_ready(icm42688_dev)) {
+    if (!device_is_ready(dev_)) {
 		LOG_ERR("Device get binding device\n");
-		return;
+		return -1;
 	}
 
 #ifdef CONFIG_ICM42688_TRIGGER
     if (IS_ENABLED(CONFIG_ICM42688_TRIGGER)) {
-	    trigger = (struct sensor_trigger) {
+	    trigger_ = (struct sensor_trigger) {
 	    	.type = SENSOR_TRIG_DATA_READY,
 	    	.chan = SENSOR_CHAN_ALL,
 	    };
 
-        if (sensor_trigger_set(icm42688_dev, &trigger, TriggerIcm42688) < 0) {
+        if (sensor_trigger_set(dev_, &trigger_, this->Trigger) < 0) {
 	    	LOG_ERR("Cannot configure trigger\n");
-	    	return;
+	    	return -1;
 	    }
 	}
 #endif // CONFIG_ICM42688_TRIGGER
+    inited_ = 1;
     LOG_INF("Icm42688Init OK!\n");
+
+    return 0;
 }
 
-void Icm42688Update(void)
+/**
+ * @brief deinit imu sensor
+ *
+ * @return 0 if success and -1 failed
+ */
+int Icm42688::DeInit(void)
 {
-    const struct device *const icm42688_dev = DEVICE_DT_GET_ONE(invensense_icm42688);
+    dev_ = NULL;
+    inited_ = 0;
+}
 
-    while (!IS_ENABLED(CONFIG_ICM42688_TRIGGER)) {
-		int rc = ProcessIcm42688(icm42688_dev);
-
-		if (rc != 0) {
-			break;
-		}
-		k_sleep(K_SECONDS(2));
+/**
+ * @brief read imu data
+ *
+ * @return 0 if success and -1 failed
+ */
+int Icm42688::Read(void)
+{
+    if (!IS_ENABLED(CONFIG_ICM42688_TRIGGER)) {
+		return Process(dev_);
 	}
+
+    return 0;
 }

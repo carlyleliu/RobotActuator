@@ -5,9 +5,9 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(TLE5012B, CONFIG_SENSOR_LOG_LEVEL);
-
 #define DT_DRV_COMPAT infineon_gmr
+
+LOG_MODULE_REGISTER(TLE5012B, LOG_LEVEL_WRN);
 
 static inline int spi_read_register(const struct spi_dt_spec *bus, uint16_t reg, uint16_t *data,
 				    size_t len)
@@ -73,7 +73,7 @@ static int tle5012b_sample_fetch(const struct device *dev, enum sensor_channel c
             res = spi_read_register(&cfg->spi, READ_SPEED_VALUE, &angle_vel, sizeof(angle_vel));
             data->angle = angle;
             data->angular_velocity = angle_vel;
-            //LOG_INF("angle_vel = %d angle = %d\n", angle_vel, angle);
+            LOG_INF("angle_vel = %d angle = %d\n", angle_vel, angle);
             break;
         default:
 		    res = -ENOTSUP;

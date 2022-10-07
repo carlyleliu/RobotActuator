@@ -1,8 +1,8 @@
-#ifndef __MIDDLEWARE_MOTOR_CONTROL_OPEN_LOOP_CONTROLLER_HPP__
-#define __MIDDLEWARE_MOTOR_CONTROL_OPEN_LOOP_CONTROLLER_HPP__
+#ifndef __OPEN_LOOP_CONTROLLER_HPP__
+#define __OPEN_LOOP_CONTROLLER_HPP__
 
 #include <component_port.hpp>
-#include <algorithm_macro.hpp>
+#include <algorithm_utils.hpp>
 
 #include <cmath>
 #include <utility>
@@ -46,7 +46,7 @@ class OpenLoopController
     float GetTimerFreq(void) { return timer_freq_; };
 
     /* export function interface */
-    void Update(uint64_t timestamp);
+    void Update(void);
     void Reset(void);
     void Test(void);
 
@@ -72,7 +72,7 @@ class OpenLoopController
 
     // State/Outputs
     uint32_t timer_freq_;
-    uint64_t time_stamp_;
+    int64_t time_stamp_;
 
   public:
     OutputPort<float2D> i_dq_target_;
@@ -82,4 +82,4 @@ class OpenLoopController
     OutputPort<float> phase_velocity_target_;
 };
 
-#endif // ! __MIDDLEWARE_MOTOR_CONTROL_OPEN_LOOP_CONTROLLER_HPP__
+#endif // ! __OPEN_LOOP_CONTROLLER_HPP__

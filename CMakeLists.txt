@@ -12,14 +12,18 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-project(RobotChassis)
+project(RobotActuator)
 
 set(UTIL_PATH util)
+set(HAL_PATH hal)
 set(DEVICE_PATH device)
 set(MIDDLEWARE_PATH middleware)
+set(ALGORITHM_PATH algorithm)
 
 add_subdirectory(util)
+add_subdirectory(hal)
 add_subdirectory(device)
+add_subdirectory(algorithm)
 add_subdirectory(middleware)
 # add_subdirectory(test)
 

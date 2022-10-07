@@ -18,7 +18,7 @@ class Observer
         subjecter_ = subjecter;
     }
 
-    virtual void Update() = 0;
+    virtual int Update() = 0;
 
   protected:
     Subject* subjecter_;

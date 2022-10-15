@@ -6,6 +6,8 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 
+#include <time_util.h>
+
 union AdcValue
 {
     uint16_t adc_16bit_value_[2];
@@ -17,7 +19,7 @@ class ImplAdc
 {
   public:
     ImplAdc() :
-        time_stamp_(0),
+        time_(0.0f),
         adc_resolution_(12) {};
     ~ImplAdc();
 
@@ -34,13 +36,13 @@ class ImplAdc
 
     float GetChannelValue(void) { return value_; };
 
-    int64_t GetTicks(void) { return time_stamp_; };
+    float GetTime(void) { return time_; };
 
     int Update(void);
     int Init(void);
 
   private:
-    int64_t time_stamp_;
+    float time_;
     uint16_t adc_channel_;
     uint16_t adc_resolution_;
     float divider_ratio_;

@@ -26,7 +26,7 @@ DcMotor::DcMotor() :
     */
 
     fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, MOTOR_CONTROL_EVENT_SET_SPEES) = [&](const Fsm::fsm_args &args) {
-        ExecuteSpeedControl();
+        ExecuteVelocityControl();
     };
     fsm_.Bind(MOTOR_CONTROL_TYPE_SPEES, MOTOR_CONTROL_EVENT_SET_IDLE) = [&](const Fsm::fsm_args &args) {
         MotorStop();
@@ -69,22 +69,22 @@ void DcMotor::MotorStop(void)
  *  @param None
  *  @return None
  */
-void DcMotor::MotorTask(uint64_t timestamp)
+void DcMotor::MotorTask(void)
 {
     if (!run_) {
         return;
     }
 }
 
-/** @brief execute speed control
+/** @brief execute velocity control
  *  @param None
  *  @return None
  */
-void DcMotor::ExecuteSpeedControl(void)
+void DcMotor::ExecuteVelocityControl(void)
 {
     constexpr float one = 1.0f;
-    float delta_speed = target_speed_ - actual_speed_;
-    float out = pid_controller_.PIDController(delta_speed);
+    float delta_velocity = target_velocity_ - actual_velocity_;
+    float out = pid_controller_.PIDController(delta_velocity);
 
     if (out > 0) {
         positive_pwm_ = std::clamp(out, -one, one);

@@ -10,11 +10,11 @@
 #include <impl_pwm.hpp>
 #include <impl_adc.hpp>
 
-LOG_MODULE_REGISTER(Main, 7);
+LOG_MODULE_REGISTER(Sample, 7);
 
 constexpr uint32_t kPrepareCalibration = 3000;
 
-int main(void)
+int EncoderAlignSample(void)
 {
     uint32_t prepare_calibration_times = 0;
 	printk("start main\n");

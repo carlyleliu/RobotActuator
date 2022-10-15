@@ -46,7 +46,7 @@ int ImplAdc::Update(void)
 {
     int err = 0;
 
-    time_stamp_ = k_uptime_ticks();
+    time_ = time();
 
     err = adc_read(adc_spec_->dev, &sequence_);
     if (err < 0) {

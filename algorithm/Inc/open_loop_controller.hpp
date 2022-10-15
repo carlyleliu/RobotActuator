@@ -3,9 +3,12 @@
 
 #include <component_port.hpp>
 #include <algorithm_utils.hpp>
+#include <foc_controller.hpp>
 
 #include <cmath>
 #include <utility>
+
+#include <time_util.h>
 
 #include <zephyr/logging/log.h>
 
@@ -15,12 +18,13 @@ class OpenLoopController
 {
   public:
     OpenLoopController() :
-    timer_freq_(170000000),
-    time_stamp_(0),
-    i_dq_target_(std::make_pair(0.0,0.0)),
-    v_dq_target_(std::make_pair(0.0,0.0)),
-    phase_target_(0.0),
-    phase_velocity_target_(0.0){};
+        align_mode_(false),
+        phase_target_(0.0f),
+        phase_velocity_target_(0.0f),
+        i_dq_target_(std::make_pair(0.0,0.0)),
+        v_dq_target_(std::make_pair(0.0,0.0)),
+        foc_ptr_(nullptr)
+        {};
     ~OpenLoopController();
 
     /* set OpenLoopController config param */
@@ -32,8 +36,9 @@ class OpenLoopController
     void SetCurrentTarget(float current) { current_target_ = current; };
     void SetVoltageTarget(float voltage) { voltage_target_ = voltage; };
     void SetInitialPhase(float phase) { initial_phase_ = phase; };
+    void SetAlignMode(bool enable) { align_mode_ = enable; };
 
-    void SetTimerFreq(uint32_t freq) { timer_freq_ = freq; };
+    void SetFocController(FieldOrientedController* p_foc) { foc_ptr_ = p_foc; };
 
     /* get OpenLoopController config param */
     float GetMaxCurrentRamp(void) { return max_current_ramp_; };
@@ -43,11 +48,10 @@ class OpenLoopController
     float GetCurrentTarget(void) { return current_target_; };
     float GetVoltageTarget(void) { return voltage_target_; };
     float GetInitialPhase(void) { return initial_phase_; };
-    float GetTimerFreq(void) { return timer_freq_; };
+    bool GetAlignMode(void) { return align_mode_; };
 
     /* export function interface */
     void Update(void);
-    void Reset(void);
     void Test(void);
 
   private:
@@ -58,28 +62,26 @@ class OpenLoopController
     };
 
   private:
-    // Config
+    /* Config */
+    bool align_mode_;
     float max_current_ramp_;    // [A/s]
     float max_voltage_ramp_;    // [V/s]
     float max_phase_vel_ramp_;  // [rad/s]
 
-    // Inputs
+    /* Inputs */
     float velocity_target_;
     float current_target_;
     float voltage_target_;
-
     float initial_phase_;
 
-    // State/Outputs
-    uint32_t timer_freq_;
-    int64_t time_stamp_;
+    /* Output */
+    float phase_target_;
+    float phase_velocity_target_;
+    std::optional<float2D> i_dq_target_;
+    std::optional<float2D> v_dq_target_;
 
-  public:
-    OutputPort<float2D> i_dq_target_;
-    OutputPort<float2D> v_dq_target_;
-
-    OutputPort<float> phase_target_;
-    OutputPort<float> phase_velocity_target_;
+    /* fov ptr */
+    FieldOrientedController* foc_ptr_;
 };
 
 #endif // ! __OPEN_LOOP_CONTROLLER_HPP__

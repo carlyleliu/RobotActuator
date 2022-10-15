@@ -2,6 +2,7 @@
 #define __DEVICE_IMU_ABSTRACT_HPP__
 
 #include <array>
+#include <time_util.hpp>
 
 class ImuAbstract
 {
@@ -31,7 +32,7 @@ class ImuAbstract
     std::array<double, 3> gyro_cal_offset_;           /* gyro calibration data. static offset correct */
 
     double temperature_;                  /* sensor temperature value */
-    volatile int64_t time_stamp_;       /* this data time stamp */
+    float time_;       /* this data time stamp */
 
     uint8_t gyro_has_calibration_ : 1;   /* flag gyro has calibration */
     uint8_t accel_has_calibration_ : 1;  /* flag accel has calibration */

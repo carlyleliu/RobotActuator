@@ -21,7 +21,7 @@ int Icm42688::Process(void)
 	struct sensor_value accel[3] = {0};
 	struct sensor_value gyro[3] = {0};
 
-    time_stamp_ = k_uptime_ticks();
+    time_ = time();
 
 	int rc = sensor_sample_fetch(dev_);
 

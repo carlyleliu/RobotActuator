@@ -2,6 +2,12 @@
 #define __MIDDLEWARE_SENSOR_ANGLE_ENCODER_ABSTRACT_HPP__
 
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/logging/log.h>
+
+#include <time_util.h>
+
 #include <cmath>
 #include <algorithm_utils.hpp>
 #include <algorithm>
@@ -9,35 +15,52 @@
 class AngleEncoderAbstract {
   public:
     AngleEncoderAbstract() :
-        direction_(1){};
-    ~AngleEncoderAbstract(){};
-    virtual void Init(void) = 0;
-    virtual void DeInit(void) = 0;
-    virtual uint16_t GetAbsoluteAngle(void) = 0;
-    virtual void UpdateData(void) = 0;
-    virtual void Notify(void) = 0;
+        time_(0.0f),
+        mechanical_angle_measure_prev_(0),
+        mechanical_angle_measure_(0),
+        electronic_angle_measure_(0),
+        mechanical_angle_offset_(1180),
+        mechanical_position_measure_(0),
+        normalized_angle_measure_(0),
+        total_angle_measure_(0),
+        rpm_(0.0f),
+        direction_(1),
+        number_of_pole_pairs_(11),
+        circle_counter_(0),
+        calibrationed_(0),
+        inited_(0),
+        aligned_(0)
+        {};
+    virtual ~AngleEncoderAbstract() {};
+    virtual int ImplInit(void) = 0;
+    virtual int ImplDeInit(void) = 0;
+    virtual int ImplCalibration(void) = 0;
+    virtual uint16_t ImplGetAbsoluteAngle(void) = 0;
+
+    int Init(void);
+    int DeInit(void);
+    int Align(void);
+    int Calibration(void);
+    int Update(void);
+    int Notify(void);
+
+    void SetNumPolePairs(uint8_t num) { number_of_pole_pairs_ = num; };
 
   protected:
-    volatile uint64_t time_stamp_;
+    float time_;
 
     int16_t mechanical_angle_measure_prev_;
     int16_t mechanical_angle_measure_;
     int16_t electronic_angle_measure_;
 
     int16_t mechanical_angle_offset_;
-    int16_t electronic_angle_offset_;
-
-    float mechanical_speed_measure_;
-    float electronic_speed_measure_;
 
     float mechanical_position_measure_;
-    float electronic_position_measure_;
 
     float normalized_angle_measure_;
     float total_angle_measure_;
 
     float rpm_;
-    float last_rpm_;
 
     int8_t direction_;
 

@@ -1,11 +1,13 @@
 #include <linear_hall_angle_encoder.hpp>
 
+LOG_MODULE_DECLARE(EncoderSensor, LOG_LEVEL_WRN);
+
 /**
-  * @brief Hall Sensor Init
+  * @brief Hall Sensor ImplInit
   * @param None
   * @retval None
   */
-void LinearHallAngleEncoder::Init(void)
+int LinearHallAngleEncoder::ImplInit(void)
 {
     hall_sensor_calibration_.min_hall_a_ = 161;
     hall_sensor_calibration_.min_hall_b_ = 161.2;
@@ -17,14 +19,16 @@ void LinearHallAngleEncoder::Init(void)
     hall_sensor_calibration_.hall_amplitude_b_ = 1966.7;
 
     inited_ = 1;
+
+    return 0;
 }
 
 /**
-  * @brief Hall Sensor DeInit
+  * @brief Hall Sensor ImplDeInit
   * @param None
   * @retval None
   */
-void LinearHallAngleEncoder::DeInit(void)
+int LinearHallAngleEncoder::ImplDeInit(void)
 {
     hall_sensor_calibration_.min_hall_a_ = 0;
     hall_sensor_calibration_.min_hall_b_ = 0;
@@ -36,6 +40,8 @@ void LinearHallAngleEncoder::DeInit(void)
     hall_sensor_calibration_.hall_amplitude_b_ = 0;
 
     inited_ = 0;
+
+    return 0;
 }
 
 /**
@@ -43,9 +49,21 @@ void LinearHallAngleEncoder::DeInit(void)
   * @param None
   * @retval None
   */
-uint16_t LinearHallAngleEncoder::GetAbsoluteAngle(void)
+uint16_t LinearHallAngleEncoder::ImplGetAbsoluteAngle(void)
 {
     return LinearHallSensorGetAngle();
+}
+
+/**
+  * @brief Hall Sensor ImplCalibration
+  * @param None
+  * @retval None
+  */
+int LinearHallAngleEncoder::ImplCalibration(void)
+{
+    LinearHallSensorCalibration();
+
+    return 0;
 }
 
 /**

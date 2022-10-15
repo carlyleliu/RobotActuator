@@ -35,13 +35,13 @@ class LinearHallAngleEncoder : public AngleEncoderAbstract
 {
   public:
     LinearHallAngleEncoder(){};
+    ~LinearHallAngleEncoder();
 
   public:
-    void Init(void) final;
-    void DeInit(void) final;
-    uint16_t GetAbsoluteAngle(void) final;
-    void UpdateData(void) final;
-    void Notify(void) final;
+    int ImplInit(void) final;
+    int ImplDeInit(void) final;
+    int ImplCalibration(void) final;
+    uint16_t ImplGetAbsoluteAngle(void) final;
 
   private:
     void SearchMinMax(float* max, float* min, const float value);

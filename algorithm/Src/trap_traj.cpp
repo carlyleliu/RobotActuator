@@ -1,4 +1,4 @@
-#include <trapTraj.hpp>
+#include <trap_traj.hpp>
 
 // A sign function where input 0 has positive sign (not 0)
 float SignHard(float val) {

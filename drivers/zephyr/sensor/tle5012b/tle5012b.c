@@ -7,7 +7,7 @@
 
 #define DT_DRV_COMPAT infineon_gmr
 
-LOG_MODULE_REGISTER(TLE5012B, LOG_LEVEL_WRN);
+LOG_MODULE_REGISTER(TLE5012B, LOG_LEVEL_ERR);
 
 static inline int spi_read_register(const struct spi_dt_spec *bus, uint16_t reg, uint16_t *data,
 				    size_t len)
@@ -27,7 +27,7 @@ static inline int spi_read_register(const struct spi_dt_spec *bus, uint16_t reg,
 	struct spi_buf rx_buf[2] = {
 		{
 			.buf = NULL,
-			.len = 2,
+			.len = 1,
 		},
 		{
 			.buf = data,
@@ -62,18 +62,16 @@ static int tle5012b_init(const struct device *dev)
 static int tle5012b_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
     int res;
-    uint16_t angle, angle_vel;
+    uint16_t angle = 0;
     struct tle5012b_data *data = dev->data;
 	const struct tle5012b_config *cfg = dev->config;
 
     switch (chan)
     {
         case SENSOR_CHAN_ALL:
-            res = spi_read_register(&cfg->spi, READ_ANGLE_VALUE, &angle, sizeof(angle));
-            res = spi_read_register(&cfg->spi, READ_SPEED_VALUE, &angle_vel, sizeof(angle_vel));
-            data->angle = angle;
-            data->angular_velocity = angle_vel;
-            LOG_INF("angle_vel = %d angle = %d\n", angle_vel, angle);
+            res = spi_read_register(&cfg->spi, READ_ANGLE_VALUE, &angle, 2);
+            data->angle = (angle & 0x7fff) << 1;
+            LOG_INF("angle = %d\n",data->angle);
             break;
         default:
 		    res = -ENOTSUP;
@@ -92,8 +90,8 @@ static int tle5012b_channel_get(const struct device *dev, enum sensor_channel ch
     switch (chan)
     {
         case SENSOR_CHAN_ALL:
-            val->val1 = data->angle;
-            val->val2 = data->angular_velocity;
+            val->val1 = (int16_t)data->angle;
+            val->val2 = (int16_t)data->angular_velocity;
             break;
         default:
 		    res = -ENOTSUP;
@@ -120,7 +118,7 @@ static const struct sensor_driver_api tle5012b_driver_api = {
 	};                                                                                          \
 												                                                \
 	static const struct tle5012b_config tle5012b_cfg_##inst = {                                 \
-		.spi = SPI_DT_SPEC_INST_GET(inst, TLE5012B_SPI_CFG, 1U),                                \
+		.spi = SPI_DT_SPEC_INST_GET(inst, TLE5012B_SPI_CFG, 0U),                                \
 	};                                                                                          \
 												                                                \
 	DEVICE_DT_INST_DEFINE(inst, tle5012b_init, NULL, &tle5012b_driver_##inst,                   \

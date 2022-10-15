@@ -12,10 +12,10 @@ class DcMotor : public MotorAbstract
     ~DcMotor();
     void MotorStart(void) final;
     void MotorStop(void) final;
-    void MotorTask(uint64_t timestamp) final;
+    void MotorTask(void) final;
 
   private:
-    void ExecuteSpeedControl(void);
+    void ExecuteVelocityControl(void);
 
   private:
     PidController pid_controller_;

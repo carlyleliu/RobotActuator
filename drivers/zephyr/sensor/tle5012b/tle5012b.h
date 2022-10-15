@@ -31,8 +31,8 @@
 
 struct tle5012b_data {
     uint16_t resolution;
-    int16_t angle;
-    int16_t angular_velocity;
+    uint16_t angle;
+    uint16_t angular_velocity;
 };
 
 struct tle5012b_config {

@@ -62,8 +62,7 @@ void FieldOrientedController::FocClark(void)
  */
 void FieldOrientedController::FocPark(void)
 {
-    float theta = phase_target_external_.GetPresent().value() + phase_velocity_target_external_.GetPresent().value() * \
-                    ((control_timestamp_ - sensor_update_timestamp_) / US_TO_S);
+    float theta = phase_measure_ + phase_velocity_measure_ *  (control_time_ - sensor_update_time_);
 
     if (i_alpha_beta_measured_.has_value()) {
         auto [i_alpha, i_beta] = *i_alpha_beta_measured_;
@@ -87,8 +86,7 @@ void FieldOrientedController::FocPark(void)
  */
 void FieldOrientedController::FocRevPark(std::optional<float2D> v_dq)
 {
-    float theta = phase_target_external_.GetPresent().value(); // + phase_velocity_target_external_.GetPresent().value() * \
-    //                ((control_timestamp_ - sensor_update_timestamp_) / US_TO_S);
+    float theta = phase_measure_;// + phase_velocity_measure_ *  (control_time_ - sensor_update_time_);
 
     auto [mod_d, mod_q] = *v_dq;
 
@@ -234,23 +232,20 @@ std::tuple<float, float, float, bool> FieldOrientedController::FocSVM(void)
  * @brief current controller update
  *
  */
-void FieldOrientedController::Update(void)
+std::tuple<float, float, float, bool> FieldOrientedController::Update(void)
 {
     std::optional<float2D> v_dq;
-    float mod_to_v = (2.0f / 3.0f) * GetVBusMeasured();
+    float mod_to_v = (2.0f / 3.0f) * vbus_measure_;
     float v_to_mod = 1.0f / mod_to_v;
 
     float mod_d, mod_q;
 
-    control_timestamp_ = k_cycle_get_64();
+    control_time_ = time();
 
     if (IsEnableCurrentControl()) {
         FocClark(); // get i_alpha_beta_measured_
         FocPark(); // get i_dq_measured_
     }
-
-    i_dq_target_ = i_dq_target_external_.GetPresent();
-    v_dq_target_ = v_dq_target_external_.GetPresent();
 
     auto [id_target, iq_target] = *i_dq_target_;
     auto [id_measure, iq_measure] = *i_dq_measured_;
@@ -282,12 +277,5 @@ void FieldOrientedController::Update(void)
 
     FocRevPark(v_dq);
 
-    auto [tA, tB, tC, success] = FocSVM();
-    if (success) {
-        pwm_phase_u_ = tB;
-        pwm_phase_v_ = tA;
-        pwm_phase_w_ = tC;
-    } else {
-        LOG_ERR("SVM [%f %f %f]failed\n", tA, tB, tC);
-    }
+    return FocSVM();
 }

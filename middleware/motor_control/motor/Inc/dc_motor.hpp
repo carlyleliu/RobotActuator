@@ -13,6 +13,7 @@ class DcMotor : public MotorAbstract
     void MotorStart(void) final;
     void MotorStop(void) final;
     void MotorTask(void) final;
+    void MotorRun(void) final;
 
   private:
     void ExecuteVelocityControl(void);

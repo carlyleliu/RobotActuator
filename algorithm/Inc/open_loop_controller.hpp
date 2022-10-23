@@ -4,6 +4,7 @@
 #include <component_port.hpp>
 #include <algorithm_utils.hpp>
 #include <foc_controller.hpp>
+#include <absolute_encoder.hpp>
 
 #include <cmath>
 #include <utility>
@@ -22,8 +23,7 @@ class OpenLoopController
         phase_target_(0.0f),
         phase_velocity_target_(0.0f),
         i_dq_target_(std::make_pair(0.0,0.0)),
-        v_dq_target_(std::make_pair(0.0,0.0)),
-        foc_ptr_(nullptr)
+        v_dq_target_(std::make_pair(0.0,0.0))
         {};
     ~OpenLoopController();
 
@@ -38,8 +38,6 @@ class OpenLoopController
     void SetInitialPhase(float phase) { initial_phase_ = phase; };
     void SetAlignMode(bool enable) { align_mode_ = enable; };
 
-    void SetFocController(FieldOrientedController* p_foc) { foc_ptr_ = p_foc; };
-
     /* get OpenLoopController config param */
     float GetMaxCurrentRamp(void) { return max_current_ramp_; };
     float GetMaxVoltageRamp(void) { return max_voltage_ramp_; };
@@ -52,14 +50,10 @@ class OpenLoopController
 
     /* export function interface */
     void Update(void);
-    void Test(void);
-
-  private:
-    float WrapPmPi(float x)
-    {
-        float intval = nearbyintf(x / (2 * kPI_));
-        return x - intval * 2 * kPI_;
-    };
+    float GetTargetPhase(void) { return phase_target_; };
+    float GetTargetPhaseVelocity(void) { return phase_velocity_target_; };
+    std::optional<float2D> GetIdqTarget(void) { return i_dq_target_; };
+    std::optional<float2D> GetVdqTarget(void) { return v_dq_target_; };
 
   private:
     /* Config */
@@ -79,9 +73,6 @@ class OpenLoopController
     float phase_velocity_target_;
     std::optional<float2D> i_dq_target_;
     std::optional<float2D> v_dq_target_;
-
-    /* fov ptr */
-    FieldOrientedController* foc_ptr_;
 };
 
 #endif // ! __OPEN_LOOP_CONTROLLER_HPP__

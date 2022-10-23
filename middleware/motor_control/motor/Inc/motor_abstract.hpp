@@ -10,6 +10,7 @@
 #include <component_port.hpp>
 #include <pid_controller.hpp>
 #include <foc_controller.hpp>
+#include <absolute_encoder.hpp>
 
 #include <fsm.hpp>
 
@@ -54,85 +55,43 @@ enum MotorControlEvent
     MOTOR_CONTROL_EVENT_NUM,
 };
 
-class MotorAbstract
+/* motor const parameter */
+typedef struct MotorConfig
 {
-  public:
-    MotorAbstract():
-        max_current_lim_(10.0f),
-        torque_constant_(0.04),
-        target_angle_(0),
-        target_torque_(0),
-        target_velocity_(0),
-        target_position_(0),
-        actual_angle_(0),
-        actual_torque_(0),
-        actual_velocity_(0),
-        actual_position_(0),
-        max_angle_(MAX_ANGLE),
-        max_torque_(MAX_TORQUE),
-        max_velocity_(MAX_SPEED),
-        max_position_(MAX_POSITION),
-        max_angle_ramp_(MAX_ANGLE_RAMP),
-        max_torque_ramp_(MAX_TORQUE_RAMP),
-        max_velocity_ramp_(MAX_SPEED_RAMP),
-        max_position_ramp_(MAX_POSITION_RAMP),
-        status_(0),
-        fault_code_(0),
-        run_(0),
-        is_over_speed_(false),
-        is_over_current_(false),
-        is_over_temperature_(false),
-        pwm_phase_u_(0.0f),
-        pwm_phase_v_(0.0f),
-        pwm_phase_w_(0.0f)
-        {};
-    virtual ~MotorAbstract(){};
-
-  public:
-    enum MotorType GetType(void) { return motor_type_; };
-    enum MotorControlType GetControlType(void) { return motor_control_type_; };
-
-    const float& GetMeasureAngle(void) { return actual_angle_; };
-    const float& GetMeasureTorque(void) { return actual_torque_; };
-    const float& GetMeasureVelocity(void) { return actual_velocity_; };
-    const float& GetMeasurePosition(void) { return actual_position_; };
-
-    const float& GetExpectAngle(void) { return target_angle_; };
-    const float& GetExpectTorque(void) { return target_torque_; };
-    const float& GetExpectVelocity(void) { return target_velocity_; };
-    const float& GetExpectPosition(void) { return target_position_; };
-
-    const uint32_t& GetStatus(void) { return status_; };
-    const uint32_t& GetFaultCode(void) { return fault_code_; };
-    void SetVBusMax(float vbus) { max_vbus_ = vbus; };
-    float GetVBusMax(void) { return max_vbus_; };
-
-    void SetAngle(float angle) { target_angle_ = std::clamp(angle, -max_angle_, max_angle_); };
-    void SetTorque(float torque) { target_torque_ = std::clamp(torque, -max_torque_, max_torque_); };
-    void SetVelocity(float velocity) { target_velocity_ = std::clamp(velocity, -max_velocity_, max_velocity_); };
-    void SetPosition(float position) { target_position_ = std::clamp(position, -max_position_, max_position_); };
-
-    float GetVBusMeasured(void) { return vbus_measured_; };
-    void SetVBusMeasured(float vbus) { vbus_measured_ = vbus; };
-
-    void SendMotorControlEvent(enum MotorControlEvent event) {fsm_.Event(event); };
-
-  public:
-    virtual void MotorStart(void) = 0;
-    virtual void MotorStop(void) = 0;
-    virtual void MotorTask(void) = 0;
-
-  protected:
-    enum MotorType motor_type_;
-    enum MotorControlType motor_control_type_;
-
-    float direction_ = 0.0f;// if -1 then positive torque is converted to negative Iq
-    float max_current_lim_;
     float torque_constant_;
-    float vbus_measured_;
-    float max_vbus_;
+    float speed_constant_;
+    float phase_inductance_;
+    float phase_resistance_;
+    float nominal_voltage_;
+    float nominal_current_;
+    float stal_current_;
+    float nominal_torque_;
+    float stal_torque_;
+    float nominal_rpm_;
+    float max_rpm_;
+    float rotor_inertia_;
+    float max_demagnetize_tempersture_;
+    uint8_t pole_pairs_;
+} MotorConfig_t;
 
-    float velocity_limit_tolerance;
+/* motor status */
+typedef struct MotorStatus
+{
+    uint32_t fault_code_ : 16;
+
+    uint32_t over_speed_ : 1;
+    uint32_t over_current_ : 1;
+    uint32_t over_temperature_ : 1;
+} MotorStatus_t;
+
+/* motor control config */
+typedef struct MotorControllerConfig
+{
+    float max_angle_ramp_;
+    float max_torque_ramp_;
+    float max_velocity_ramp_;
+    float max_position_ramp_;
+    float velocity_limit_tolerance_;
 
     float target_angle_;
     float target_torque_;
@@ -143,25 +102,64 @@ class MotorAbstract
     float actual_torque_;
     float actual_velocity_;
     float actual_position_;
+    float vbus_measured_;
+} MotorControllerConfig_t;
 
-    const float max_angle_;
-    const float max_torque_;
-    const float max_velocity_;
-    const float max_position_;
+class MotorAbstract
+{
+  public:
+    MotorAbstract():
+        time_(0.0f),
+        sensor_update_time_(0.0f),
+        v_dq_target_({0.0f, 0.0f}),
+        i_dq_target_({0.0f, 0.0f}),
+        pwm_phase_u_(0.0f),
+        pwm_phase_v_(0.0f),
+        pwm_phase_w_(0.0f)
+        {};
+    virtual ~MotorAbstract() {};
 
-    const float max_angle_ramp_;
-    const float max_torque_ramp_;
-    const float max_velocity_ramp_;
-    const float max_position_ramp_;
+  public:
+    enum MotorType GetType(void) { return motor_type_; };
+    enum MotorControlType GetControlType(void) { return motor_control_type_; };
 
-    uint64_t time_stamp_;
-    uint32_t status_;
-    uint32_t fault_code_;
-    uint32_t run_;
+    const float& GetMeasureAngle(void) { return motor_controller_conf_.actual_angle_; };
+    const float& GetMeasureTorque(void) { return motor_controller_conf_.actual_torque_; };
+    const float& GetMeasureVelocity(void) { return motor_controller_conf_.actual_velocity_; };
+    const float& GetMeasurePosition(void) { return motor_controller_conf_.actual_position_; };
 
-    bool is_over_speed_;
-    bool is_over_current_;
-    bool is_over_temperature_;
+    const float& GetExpectAngle(void) { return motor_controller_conf_.target_angle_; };
+    const float& GetExpectTorque(void) { return motor_controller_conf_.target_torque_; };
+    const float& GetExpectVelocity(void) { return motor_controller_conf_.target_velocity_; };
+    const float& GetExpectPosition(void) { return motor_controller_conf_.target_position_; };
+
+    const uint32_t GetFaultCode(void) { return motor_status_.fault_code_; };
+
+    void SetAngle(float angle) { motor_controller_conf_.target_angle_ = angle; };
+    void SetTorque(float torque) { motor_controller_conf_.target_torque_ = std::clamp(torque, -motor_conf_.stal_torque_, motor_conf_.stal_torque_); };
+    void SetVelocity(float velocity) { motor_controller_conf_.target_velocity_ = std::clamp(velocity, -motor_conf_.max_rpm_, motor_conf_.max_rpm_); };
+    void SetPosition(float position) { motor_controller_conf_.target_position_ = position; };
+
+    float GetVBusMeasured(void) { return motor_controller_conf_.vbus_measured_; };
+    void SetVBusMeasured(float vbus) { motor_controller_conf_.vbus_measured_ = vbus; };
+
+    void SendMotorControlEvent(enum MotorControlEvent event) {fsm_.Event(event); };
+
+  public:
+    virtual void MotorStart(void) = 0;
+    virtual void MotorStop(void) = 0;
+    virtual void MotorRun(void) = 0;
+    virtual void MotorTask(void) = 0;
+
+  protected:
+    enum MotorType motor_type_;
+    enum MotorControlType motor_control_type_;
+    MotorConfig_t motor_conf_;
+    MotorStatus_t motor_status_;
+    MotorControllerConfig_t motor_controller_conf_;
+
+    float time_;
+    float sensor_update_time_;
 
     std::optional<float2D> v_dq_target_; // fed to the FOC
     std::optional<float2D> i_dq_target_; // fed to the FOC

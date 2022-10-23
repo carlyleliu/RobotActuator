@@ -48,7 +48,7 @@ DcMotor::~DcMotor()
  */
 void DcMotor::MotorStart(void)
 {
-    run_ = 1;
+
 }
 
 /** @brief Motor control Stop
@@ -57,12 +57,18 @@ void DcMotor::MotorStart(void)
  */
 void DcMotor::MotorStop(void)
 {
-    run_ = 0;
-
     positive_pwm_ = 0;
     positive_pwm_.Reset();
     negative_pwm_ = 0;
     negative_pwm_.Reset();
+}
+
+/** @brief Motor control run
+ *  @param None
+ *  @return None
+ */
+void DcMotor::MotorRun(void)
+{
 }
 
 /** @brief Motor control Task
@@ -71,9 +77,7 @@ void DcMotor::MotorStop(void)
  */
 void DcMotor::MotorTask(void)
 {
-    if (!run_) {
-        return;
-    }
+    return;
 }
 
 /** @brief execute velocity control
@@ -83,7 +87,7 @@ void DcMotor::MotorTask(void)
 void DcMotor::ExecuteVelocityControl(void)
 {
     constexpr float one = 1.0f;
-    float delta_velocity = target_velocity_ - actual_velocity_;
+    float delta_velocity = motor_controller_conf_.target_velocity_ - motor_controller_conf_.actual_velocity_;
     float out = pid_controller_.PIDController(delta_velocity);
 
     if (out > 0) {

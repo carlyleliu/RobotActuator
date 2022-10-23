@@ -16,6 +16,8 @@ int AbsoluteAngleEncoder::ImplInit(void)
         return -EIO;
 	}
 
+    inited_ = 1;
+
     return 0;
 }
 
@@ -27,6 +29,7 @@ int AbsoluteAngleEncoder::ImplInit(void)
 int AbsoluteAngleEncoder::ImplDeInit(void)
 {
     dev_ = NULL;
+    inited_ = 0;
 
     return 0;
 }

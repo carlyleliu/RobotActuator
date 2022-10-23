@@ -12,12 +12,15 @@
 
 LOG_MODULE_REGISTER(Sample, 7);
 
-int MotorOpenControl(void)
+int main(void)
 {
-	printk("start main\n");
+	printk("start sample\n");
+
+    float phase = 0.0f;
+    float rpm = 0.0f;
+    float sensor_update_time = 0.0f;
 
     BldcMotor* bldc_ptr = new(BldcMotor);
-    OpenLoopController* open_loop_control_ptr = new(OpenLoopController);
 
     ImplPwm* pwm0_ptr = new(ImplPwm);
     pwm0_ptr->Init(0);
@@ -26,17 +29,37 @@ int MotorOpenControl(void)
     ImplPwm* pwm2_ptr = new(ImplPwm);
     pwm2_ptr->Init(2);
 
-    FieldOrientedController* foc_ptr = bldc_ptr->GetFocControllerHandle();
-    open_loop_control_ptr->SetFocController(foc_ptr);
+    FieldOrientedController* foc_ptr = bldc_ptr->GetFocHandle();
+    OpenLoopController* open_loop_control_ptr = new(OpenLoopController);
+
+    //open_loop_control_ptr->SetAlignMode(true);
 
     pwm0_ptr->pwm_input_port_.ConnectTo(&bldc_ptr->pwm_phase_u_);
     pwm1_ptr->pwm_input_port_.ConnectTo(&bldc_ptr->pwm_phase_v_);
     pwm2_ptr->pwm_input_port_.ConnectTo(&bldc_ptr->pwm_phase_w_);
 
+    open_loop_control_ptr->SetMaxCurrentRamp(2);
+    open_loop_control_ptr->SetMaxVoltageRamp(5);
+    open_loop_control_ptr->SetMaxPhaseVelRamp(5);
+    open_loop_control_ptr->SetVelocityTarget(100);
+
+    open_loop_control_ptr->SetCurrentTarget(0);
+    open_loop_control_ptr->SetVoltageTarget(4);
+    open_loop_control_ptr->SetInitialPhase(0);
+
     while (1) {
         k_busy_wait(300);
+        open_loop_control_ptr->Update();
+        phase = open_loop_control_ptr->GetTargetPhase();
+        rpm = open_loop_control_ptr->GetTargetPhaseVelocity();
+        sensor_update_time = time();
 
-        open_loop_control_ptr->Test();
+        foc_ptr->SetPhaseAngle(phase);
+        foc_ptr->SetPhaseVelocity(rpm);
+        foc_ptr->SetSensorUpdateTime(sensor_update_time);
+        foc_ptr->SetVbus(12);
+        foc_ptr->SetVdq(open_loop_control_ptr->GetVdqTarget());
+
         bldc_ptr->MotorTask();
         pwm0_ptr->Update();
         pwm1_ptr->Update();

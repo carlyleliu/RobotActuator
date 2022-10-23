@@ -20,11 +20,10 @@ class BldcMotor : public MotorAbstract
 
     void MotorStart(void) final;
     void MotorStop(void) final;
-    void MotorTask(void);
-    void Test(void);
+    void MotorTask(void) final;
+    void MotorRun(void) final;
 
-    //FieldOrientedController& GetFocControllerHandle(void) { return foc_; };
-    FieldOrientedController* GetFocControllerHandle(void) { return &foc_; };
+    FieldOrientedController* GetFocHandle(void) { return &foc_; };
 
   private:
     void TorqueControl(void);
@@ -32,20 +31,16 @@ class BldcMotor : public MotorAbstract
     void PositionControl(void);
 
   private:
-    FieldOrientedController foc_;
     PidController torque_pid_;
     PidController velocity_pid_;
     PidController position_pid_;
+
+    FieldOrientedController foc_;
 
     enum BldcMotorType bldc_type_;
 
     bool r_wl_ff_enable;
     bool bemf_ff_enable_;
-
-    float phase_inductance_;
-    float phase_resistance_;
-
-    int32_t pole_pairs_;
 };
 
 

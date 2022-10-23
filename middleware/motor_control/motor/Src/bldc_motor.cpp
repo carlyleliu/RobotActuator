@@ -5,7 +5,9 @@ LOG_MODULE_REGISTER(BldcMotorControl, 3);
 
 BldcMotor::BldcMotor() :
     MotorAbstract(),
-    bldc_type_(BLDC_GIMBAL)
+    bldc_type_(BLDC_GIMBAL),
+    r_wl_ff_enable(false),
+    bemf_ff_enable_(false)
 {
     /* enter or exit state action */
     fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, STATE_INIT_EVENT) = [&](const Fsm::fsm_args &args) {
@@ -121,18 +123,20 @@ BldcMotor::~BldcMotor()
 
 void BldcMotor::MotorStart(void)
 {
-    run_ = 1;
+
 }
 
 void BldcMotor::MotorStop(void)
 {
-    run_ = 0;
+    pwm_phase_u_ = 0;
+    pwm_phase_v_ = 0;
+    pwm_phase_w_ = 0;
 }
 
-
-void BldcMotor::MotorTask(void)
+void BldcMotor::MotorRun(void)
 {
     auto [tA, tB, tC, success] = foc_.Update();
+
     if (success) {
         pwm_phase_u_ = tA;
         pwm_phase_v_ = tB;
@@ -140,6 +144,31 @@ void BldcMotor::MotorTask(void)
     } else {
         LOG_ERR("foc exec failed pwm[%f %f %f]\n", tA, tB, tC);
     }
+}
+
+void BldcMotor::MotorTask(void)
+{
+    std::optional<float> phase_measure = phase_measure_.GetPresent();
+    std::optional<float> phase_velocity_measure = phase_velocity_measure_.GetPresent();
+
+    foc_.SetPhaseAngle(*phase_measure);
+    foc_.SetPhaseVelocity(*phase_velocity_measure);
+    motor_control_type_ = MOTOR_CONTROL_TYPE_TORQUE;
+
+    if (MOTOR_CONTROL_TYPE_TORQUE == motor_control_type_) {
+        motor_controller_conf_.target_torque_ = 0.1; //for test
+        TorqueControl();
+    } else if (MOTOR_CONTROL_TYPE_SPEES == motor_control_type_) {
+        SpeedControl();
+    } else if (MOTOR_CONTROL_TYPE_POSITION == motor_control_type_) {
+        PositionControl();
+    } else if (MOTOR_CONTROL_TYPE_OL == motor_control_type_) {
+
+    } else if (MOTOR_CONTROL_TYPE_IDLE == motor_control_type_) {
+
+    }
+
+    MotorRun();
 }
 
 
@@ -152,13 +181,15 @@ void BldcMotor::PositionControl(void)
     std::optional<float> position_measure = position_measure_.GetPresent();
     std::optional<float> velocity_measure = velocity_measure_.GetPresent();
 
-    float position_err = target_position_ - *position_measure;
+    float position_err = motor_controller_conf_.target_position_ - *position_measure;
 
-    position_err = std::clamp(position_err, -max_position_ramp_, max_position_ramp_);
+    position_err = std::clamp(position_err, \
+                -motor_controller_conf_.max_position_ramp_, motor_controller_conf_.max_position_ramp_);
 
-    target_velocity_ = position_pid_.PIController(position_err);
+    motor_controller_conf_.target_velocity_ = position_pid_.PIController(position_err);
 
-    target_velocity_ = std::clamp(target_velocity_, -max_velocity_, max_velocity_);
+    motor_controller_conf_.target_velocity_ = std::clamp(motor_controller_conf_.target_velocity_, \
+                                                -motor_conf_.max_rpm_, motor_conf_.max_rpm_);
 }
 
 /**
@@ -169,18 +200,20 @@ void BldcMotor::SpeedControl(void)
 {
     std::optional<float> velocity_measure = velocity_measure_.GetPresent();
 
-    if (velocity_measure > velocity_limit_tolerance * max_velocity_) {
-        is_over_speed_ = true;
+    if (velocity_measure > motor_controller_conf_.velocity_limit_tolerance_ * motor_conf_.max_rpm_) {
+        motor_status_.over_speed_ = true;
         return;
     }
 
-    float velocity_err = target_velocity_ - *velocity_measure;
+    float velocity_err = motor_controller_conf_.target_velocity_ - *velocity_measure;
 
-    velocity_err = std::clamp(velocity_err, -max_velocity_ramp_, max_velocity_ramp_);
+    velocity_err = std::clamp(velocity_err, \
+                    -motor_controller_conf_.max_velocity_ramp_, motor_controller_conf_.max_velocity_ramp_);
 
-    target_torque_ = velocity_pid_.PIDController(velocity_err);
+    motor_controller_conf_.target_torque_ = velocity_pid_.PIDController(velocity_err);
 
-    target_torque_ = std::clamp(target_torque_, -max_torque_, max_torque_);
+    motor_controller_conf_.target_torque_ = std::clamp(motor_controller_conf_.target_torque_,\
+                                             -motor_conf_.stal_torque_, motor_conf_.stal_torque_);
 }
 
 /**
@@ -189,19 +222,19 @@ void BldcMotor::SpeedControl(void)
  */
 void BldcMotor::TorqueControl(void)
 {
-    float torque = direction_ * target_torque_;
+    float torque = motor_controller_conf_.target_torque_;
 
-        // Load setpoints from previous iteration.
+    // Load setpoints from previous iteration.
     auto [id, iq] = *i_dq_target_;
 
     // 1% space reserved for Iq to avoid numerical issues
-    id = std::clamp(id, -max_current_lim_ * 0.99f, max_current_lim_ * 0.99f);
+    id = std::clamp(id, -motor_conf_.stal_current_ * 0.99f, motor_conf_.stal_current_ * 0.99f);
 
     // Convert requested torque to current
-    iq = torque / torque_constant_;
+    iq = torque / motor_conf_.torque_constant_;
 
     // 2-norm clamping where Id takes priority
-    float iq_lim_sqr = SQ(torque_constant_) - SQ(id);
+    float iq_lim_sqr = SQ(motor_conf_.stal_current_) - SQ(id);
     float iq_lim = (iq_lim_sqr <= 0.0f) ? 0.0f : sqrt(iq_lim_sqr);
     iq = std::clamp(iq, -iq_lim, iq_lim);
 
@@ -219,10 +252,10 @@ void BldcMotor::TorqueControl(void)
             return;
         }
 
-        vd -= *phase_vel * phase_inductance_ * iq;
-        vq += *phase_vel * phase_inductance_ * id;
-        vd += phase_resistance_ * id;
-        vq += phase_resistance_ * iq;
+        vd -= *phase_vel * motor_conf_.phase_inductance_ * iq;
+        vq += *phase_vel * motor_conf_.phase_inductance_ * id;
+        vd += motor_conf_.phase_resistance_ * id;
+        vq += motor_conf_.phase_resistance_ * iq;
     }
 
     if (bemf_ff_enable_) {
@@ -230,7 +263,7 @@ void BldcMotor::TorqueControl(void)
             return;
         }
 
-        vq += *phase_vel * (2.0f / 3.0f) * (torque_constant_ / pole_pairs_);
+        vq += *phase_vel * (2.0f / 3.0f) * (motor_conf_.torque_constant_ / motor_conf_.pole_pairs_);
     }
 
     if (bldc_type_ == BLDC_GIMBAL) {
@@ -239,4 +272,7 @@ void BldcMotor::TorqueControl(void)
     } else {
         v_dq_target_ = {vd, vq};
     }
+
+    foc_.SetIdq(i_dq_target_);
+    foc_.SetVdq(v_dq_target_);
 }

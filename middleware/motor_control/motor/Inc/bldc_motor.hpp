@@ -23,7 +23,24 @@ class BldcMotor : public MotorAbstract
     void MotorTask(void) final;
     void MotorRun(void) final;
 
-    FieldOrientedController* GetFocHandle(void) { return &foc_; };
+    FieldOrientedController& GetFocHandle(void) {
+        return foc_;
+    };
+    PidController& GetTorquePidHandler(void) {
+        return torque_pid_;
+    };
+    PidController& GetVelocityPidHandler(void) {
+        return velocity_pid_;
+    };
+    PidController& GetPositionPidHandler(void) {
+        return position_pid_;
+    };
+    PidController& GetQAxisPidHandler(void) {
+        return foc_.GetQAxisPidHandler();
+    };
+    PidController& GetDAxisPidHandler(void) {
+        return foc_.GetDAxisPidHandler();
+    };
 
   private:
     void TorqueControl(void);

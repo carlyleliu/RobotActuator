@@ -50,24 +50,50 @@ class FieldOrientedController
     std::tuple<float, float, float, bool> Update(void);
 
     /* current loop */
-    void EnableCurrentControl(void) { enable_current_control_ = true; };
-    void DisableCurrentControl(void) { enable_current_control_ = false; };
-    bool IsEnableCurrentControl(void) { return enable_current_control_; };
+    void EnableCurrentControl(void) {
+        enable_current_control_ = true;
+    };
+    void DisableCurrentControl(void) {
+        enable_current_control_ = false;
+    };
+    bool IsEnableCurrentControl(void) {
+        return enable_current_control_;
+    };
 
     /* update phase current */
     int SetPhaseCurrent(float* current, int num);
 
     /* update phase angle */
-    void SetPhaseAngle(float phase) { phase_measure_ = phase; };
-    void SetPhaseVelocity(float velocity) { phase_velocity_measure_ = velocity; };
-    void SetSensorUpdateTime(float time) { sensor_update_time_ = time; };
+    void SetPhaseAngle(float phase) {
+        phase_measure_ = phase;
+    };
+    void SetPhaseVelocity(float velocity) {
+        phase_velocity_measure_ = velocity;
+    };
+    void SetSensorUpdateTime(float time) {
+        sensor_update_time_ = time;
+    };
 
     /* update i_dq and v_dq */
-    void SetIdq(std::optional<float2D> i_dq) { i_dq_target_ = i_dq; };
-    void SetVdq(std::optional<float2D> v_dq) { v_dq_target_ = v_dq; };
+    void SetIdq(std::optional<float2D> i_dq) {
+        i_dq_target_ = i_dq;
+    };
+    void SetVdq(std::optional<float2D> v_dq) {
+        v_dq_target_ = v_dq;
+    };
 
     /* update vbus */
-    void SetVbus(float vbus) { vbus_measure_ = vbus; };
+    void SetVbus(float vbus) {
+        vbus_measure_ = vbus;
+    };
+
+    PidController& GetDAxisPidHandler(void) {
+        return current_d_axis_pid_controller_;
+    };
+    PidController& GetQAxisPidHandler(void) {
+        return current_q_axis_pid_controller_;
+    };
+
 
   private:
     const uint8_t current_phase_num_;

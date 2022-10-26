@@ -28,17 +28,23 @@ class PidController
     /**
      * It updates the Kp gain
      */
-    void SetKp(FloatPoint kp) { kp_gain_ = kp; };
+    void SetKp(FloatPoint kp) {
+        kp_gain_ = kp;
+    };
 
     /**
      * It updates the Ki gain
      */
-    void SetKi(FloatPoint ki) { ki_gain_ = ki; };
+    void SetKi(FloatPoint ki) {
+        ki_gain_ = ki;
+    };
 
     /**
      * It updates the Kd gain
      */
-    void SetKd(FloatPoint kd) { kd_gain_ = kd; };
+    void SetKd(FloatPoint kd) {
+        kd_gain_ = kd;
+    };
 
     /**
      * It updates the Kp ki and kd gain

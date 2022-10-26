@@ -153,19 +153,16 @@ void BldcMotor::MotorTask(void)
 
     foc_.SetPhaseAngle(*phase_measure);
     foc_.SetPhaseVelocity(*phase_velocity_measure);
-    motor_control_type_ = MOTOR_CONTROL_TYPE_TORQUE;
 
-    if (MOTOR_CONTROL_TYPE_TORQUE == motor_control_type_) {
-        motor_controller_conf_.target_torque_ = 0.1; //for test
-        TorqueControl();
-    } else if (MOTOR_CONTROL_TYPE_SPEES == motor_control_type_) {
-        SpeedControl();
-    } else if (MOTOR_CONTROL_TYPE_POSITION == motor_control_type_) {
+    if (motor_control_type_ >= MOTOR_CONTROL_TYPE_POSITION) {
         PositionControl();
-    } else if (MOTOR_CONTROL_TYPE_OL == motor_control_type_) {
-
-    } else if (MOTOR_CONTROL_TYPE_IDLE == motor_control_type_) {
-
+    }
+    if (motor_control_type_ >= MOTOR_CONTROL_TYPE_SPEES) {
+        SpeedControl();
+    }
+    if (motor_control_type_ >= MOTOR_CONTROL_TYPE_TORQUE || \
+        motor_control_type_ >= MOTOR_CONTROL_TYPE_OL) {
+        TorqueControl();
     }
 
     MotorRun();
@@ -189,7 +186,7 @@ void BldcMotor::PositionControl(void)
     motor_controller_conf_.target_velocity_ = position_pid_.PIController(position_err);
 
     motor_controller_conf_.target_velocity_ = std::clamp(motor_controller_conf_.target_velocity_, \
-                                                -motor_conf_.max_rpm_, motor_conf_.max_rpm_);
+                                                -motor_conf_.max_velocity_, motor_conf_.max_velocity_);
 }
 
 /**
@@ -200,8 +197,8 @@ void BldcMotor::SpeedControl(void)
 {
     std::optional<float> velocity_measure = velocity_measure_.GetPresent();
 
-    if (velocity_measure > motor_controller_conf_.velocity_limit_tolerance_ * motor_conf_.max_rpm_) {
-        motor_status_.over_speed_ = true;
+    if (velocity_measure > motor_controller_conf_.velocity_limit_tolerance_ * motor_conf_.max_velocity_) {
+        motor_status_.over_velocity_ = true;
         return;
     }
 
@@ -224,7 +221,7 @@ void BldcMotor::TorqueControl(void)
 {
     float torque = motor_controller_conf_.target_torque_;
 
-    // Load setpoints from previous iteration.
+    // Load target from previous iteration.
     auto [id, iq] = *i_dq_target_;
 
     // 1% space reserved for Iq to avoid numerical issues

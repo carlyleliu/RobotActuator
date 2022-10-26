@@ -29,7 +29,7 @@ int main(void)
     ImplPwm* pwm2_ptr = new(ImplPwm);
     pwm2_ptr->Init(2);
 
-    FieldOrientedController* foc_ptr = bldc_ptr->GetFocHandle();
+    FieldOrientedController& foc_ptr = bldc_ptr->GetFocHandle();
     OpenLoopController* open_loop_control_ptr = new(OpenLoopController);
 
     //open_loop_control_ptr->SetAlignMode(true);
@@ -54,11 +54,11 @@ int main(void)
         rpm = open_loop_control_ptr->GetTargetPhaseVelocity();
         sensor_update_time = time();
 
-        foc_ptr->SetPhaseAngle(phase);
-        foc_ptr->SetPhaseVelocity(rpm);
-        foc_ptr->SetSensorUpdateTime(sensor_update_time);
-        foc_ptr->SetVbus(12);
-        foc_ptr->SetVdq(open_loop_control_ptr->GetVdqTarget());
+        foc_ptr.SetPhaseAngle(phase);
+        foc_ptr.SetPhaseVelocity(rpm);
+        foc_ptr.SetSensorUpdateTime(sensor_update_time);
+        foc_ptr.SetVbus(12);
+        foc_ptr.SetVdq(open_loop_control_ptr->GetVdqTarget());
 
         bldc_ptr->MotorTask();
         pwm0_ptr->Update();

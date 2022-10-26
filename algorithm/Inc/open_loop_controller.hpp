@@ -28,32 +28,72 @@ class OpenLoopController
     ~OpenLoopController();
 
     /* set OpenLoopController config param */
-    void SetMaxCurrentRamp(float max_current) { max_current_ramp_ = max_current; };
-    void SetMaxVoltageRamp(float max_voltage) { max_voltage_ramp_ = max_voltage; };
-    void SetMaxPhaseVelRamp(float max_phase_vel) { max_phase_vel_ramp_ = max_phase_vel; };
+    void SetMaxCurrentRamp(float max_current) {
+        max_current_ramp_ = max_current;
+    };
+    void SetMaxVoltageRamp(float max_voltage) {
+        max_voltage_ramp_ = max_voltage;
+    };
+    void SetMaxPhaseVelRamp(float max_phase_vel) {
+        max_phase_vel_ramp_ = max_phase_vel;
+    };
 
-    void SetVelocityTarget(float vel) { velocity_target_ = vel; };
-    void SetCurrentTarget(float current) { current_target_ = current; };
-    void SetVoltageTarget(float voltage) { voltage_target_ = voltage; };
-    void SetInitialPhase(float phase) { initial_phase_ = phase; };
-    void SetAlignMode(bool enable) { align_mode_ = enable; };
+    void SetVelocityTarget(float vel) {
+        velocity_target_ = vel;
+    };
+    void SetCurrentTarget(float current) {
+        current_target_ = current;
+    };
+    void SetVoltageTarget(float voltage) {
+        voltage_target_ = voltage;
+    };
+    void SetInitialPhase(float phase) {
+        initial_phase_ = phase;
+    };
+    void SetAlignMode(bool enable) {
+        align_mode_ = enable;
+    };
 
     /* get OpenLoopController config param */
-    float GetMaxCurrentRamp(void) { return max_current_ramp_; };
-    float GetMaxVoltageRamp(void) { return max_voltage_ramp_; };
-    float GetMaxPhaseVelRamp(void) { return max_phase_vel_ramp_; };
-    float GetVelocityTarget(void) { return velocity_target_; };
-    float GetCurrentTarget(void) { return current_target_; };
-    float GetVoltageTarget(void) { return voltage_target_; };
-    float GetInitialPhase(void) { return initial_phase_; };
-    bool GetAlignMode(void) { return align_mode_; };
+    float GetMaxCurrentRamp(void) {
+        return max_current_ramp_;
+    };
+    float GetMaxVoltageRamp(void) {
+        return max_voltage_ramp_;
+    };
+    float GetMaxPhaseVelRamp(void) {
+        return max_phase_vel_ramp_;
+    };
+    float GetVelocityTarget(void) {
+        return velocity_target_;
+    };
+    float GetCurrentTarget(void) {
+        return current_target_;
+    };
+    float GetVoltageTarget(void) {
+        return voltage_target_;
+    };
+    float GetInitialPhase(void) {
+        return initial_phase_;
+    };
+    bool GetAlignMode(void) {
+        return align_mode_;
+    };
 
     /* export function interface */
     void Update(void);
-    float GetTargetPhase(void) { return phase_target_; };
-    float GetTargetPhaseVelocity(void) { return phase_velocity_target_; };
-    std::optional<float2D> GetIdqTarget(void) { return i_dq_target_; };
-    std::optional<float2D> GetVdqTarget(void) { return v_dq_target_; };
+    float GetTargetPhase(void) {
+        return phase_target_;
+    };
+    float GetTargetPhaseVelocity(void) {
+        return phase_velocity_target_;
+    };
+    std::optional<float2D> GetIdqTarget(void) {
+        return i_dq_target_;
+    };
+    std::optional<float2D> GetVdqTarget(void) {
+        return v_dq_target_;
+    };
 
   private:
     /* Config */

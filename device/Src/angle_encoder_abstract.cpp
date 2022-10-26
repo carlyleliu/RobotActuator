@@ -64,16 +64,16 @@ int AngleEncoderAbstract::Update(void)
 
     float dt = current_time - time_;
 
-    mechanical_angle_measure_prev_ = mechanical_angle_measure_;
+    angle_measure_prev_ = angle_measure_;
 
     if (1 == mechanical_to_phase_direction_)
-        mechanical_angle_measure_ = (int16_t)(ImplGetAbsoluteAngle() - mechanical_angle_offset_);
+        angle_measure_ = (int16_t)(ImplGetAbsoluteAngle() - angle_offset_);
     else
-        mechanical_angle_measure_ = (int16_t)(mechanical_angle_offset_ - ImplGetAbsoluteAngle());
+        angle_measure_ = (int16_t)(angle_offset_ - ImplGetAbsoluteAngle());
 
-    electronic_angle_measure_ = mechanical_angle_measure_ * number_of_pole_pairs_;
+    phase_measure_ = angle_measure_ * pole_pairs_;
 
-    int16_t delta_mechanical_angle = mechanical_angle_measure_ - mechanical_angle_measure_prev_;
+    int16_t delta_mechanical_angle = angle_measure_ - angle_measure_prev_;
 
 	if (delta_mechanical_angle < -32768) {
 		circle_counter_++;
@@ -83,16 +83,16 @@ int AngleEncoderAbstract::Update(void)
 
     rotate_direction_ = (delta_mechanical_angle > 0) ? 1 : -1;
 
-    mechanical_position_measure_ = (circle_counter_ + mechanical_angle_measure_ / 65536.0) * 2 * kPI_;
-    normalized_angle_measure_ = (electronic_angle_measure_ / 65536.0 ) * 2 * kPI_;
+    position_measure_ = (circle_counter_ + angle_measure_ / 65536.0) * 2 * kPI_;
+    normalized_angle_measure_ = (phase_measure_ / 65536.0 ) * 2 * kPI_;
     total_angle_measure_ = normalized_angle_measure_ + circle_counter_ * 2 * kPI_;
 
-    rpm_ = (delta_mechanical_angle / 65536.0) * dt;
+    velocity_ = (delta_mechanical_angle / 65536.0) * dt;
 
     time_ = current_time;
 
     measure_normalize_angle_ = normalized_angle_measure_;
-    measure_rpm_ = rpm_;
+    measure_velocity_ = velocity_;
 
     return 0;
 }

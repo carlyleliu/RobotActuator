@@ -124,9 +124,9 @@ uint16_t LinearHallAngleEncoder::LinearHallSensorGetAngle(void)
         normalized_angle_measure_ += 360.0f;
     }
 
-    electronic_angle_measure_ = normalized_angle_measure_ / 360.0f * 65536;
+    phase_measure_ = normalized_angle_measure_ / 360.0f * 65536;
 
-    return electronic_angle_measure_;
+    return phase_measure_;
 }
 
 /**

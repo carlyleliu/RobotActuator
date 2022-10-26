@@ -16,16 +16,6 @@
 
 class PidController;
 
-#define MAX_ANGLE       (-1)
-#define MAX_TORQUE      (-1)
-#define MAX_SPEED       (-1)
-#define MAX_POSITION    (-1)
-
-#define MAX_ANGLE_RAMP       (40)
-#define MAX_TORQUE_RAMP      (60)
-#define MAX_SPEED_RAMP       (1000)
-#define MAX_POSITION_RAMP    (2000)
-
 enum MotorType
 {
     MOTOR_TYPE_DC = 0,
@@ -39,8 +29,8 @@ enum MotorControlType
 {
     MOTOR_CONTROL_TYPE_IDLE = 0,
     MOTOR_CONTROL_TYPE_OL,
-    MOTOR_CONTROL_TYPE_SPEES,
     MOTOR_CONTROL_TYPE_TORQUE,
+    MOTOR_CONTROL_TYPE_SPEES,
     MOTOR_CONTROL_TYPE_POSITION,
     MOTOR_CONTROL_TYPE_NUM,
 };
@@ -58,20 +48,25 @@ enum MotorControlEvent
 /* motor const parameter */
 typedef struct MotorConfig
 {
-    float torque_constant_;
-    float speed_constant_;
-    float phase_inductance_;
-    float phase_resistance_;
-    float nominal_voltage_;
-    float nominal_current_;
-    float stal_current_;
-    float nominal_torque_;
-    float stal_torque_;
-    float nominal_rpm_;
-    float max_rpm_;
-    float rotor_inertia_;
-    float max_demagnetize_tempersture_;
     uint8_t pole_pairs_;
+    /* torque param */
+    float torque_constant_;     // N.M/A
+    float nominal_torque_;      // N.M
+    float stal_torque_;         // N.M
+    /* velocity param */
+    float velocity_constant_;   //rpm/V
+    float nominal_velocity_;    //rpm
+    float max_velocity_;        //rpm
+    /* voltage resistance inductance */
+    float phase_inductance_;    //mH
+    float phase_resistance_;    //o
+    float nominal_voltage_;     //V
+    /* current */
+    float nominal_current_;     //A
+    float stal_current_;        //A
+    /* rotor and tempersture */
+    float rotor_inertia_;       //fcm^2
+    float max_demagnetize_tempersture_;
 } MotorConfig_t;
 
 /* motor status */
@@ -79,7 +74,7 @@ typedef struct MotorStatus
 {
     uint32_t fault_code_ : 16;
 
-    uint32_t over_speed_ : 1;
+    uint32_t over_velocity_ : 1;
     uint32_t over_current_ : 1;
     uint32_t over_temperature_ : 1;
 } MotorStatus_t;
@@ -120,30 +115,81 @@ class MotorAbstract
     virtual ~MotorAbstract() {};
 
   public:
-    enum MotorType GetType(void) { return motor_type_; };
-    enum MotorControlType GetControlType(void) { return motor_control_type_; };
+    enum MotorType GetType(void) {
+        return motor_type_;
+    };
+    enum MotorControlType GetControlType(void) {
+        return motor_control_type_;
+    };
 
-    const float& GetMeasureAngle(void) { return motor_controller_conf_.actual_angle_; };
-    const float& GetMeasureTorque(void) { return motor_controller_conf_.actual_torque_; };
-    const float& GetMeasureVelocity(void) { return motor_controller_conf_.actual_velocity_; };
-    const float& GetMeasurePosition(void) { return motor_controller_conf_.actual_position_; };
+    const float& GetMeasureAngle(void) {
+        return motor_controller_conf_.actual_angle_;
+    };
+    const float& GetMeasureTorque(void) {
+        return motor_controller_conf_.actual_torque_;
+    };
+    const float& GetMeasureVelocity(void) {
+        return motor_controller_conf_.actual_velocity_; };
+    const float& GetMeasurePosition(void) {
+        return motor_controller_conf_.actual_position_;
+    };
 
-    const float& GetExpectAngle(void) { return motor_controller_conf_.target_angle_; };
-    const float& GetExpectTorque(void) { return motor_controller_conf_.target_torque_; };
-    const float& GetExpectVelocity(void) { return motor_controller_conf_.target_velocity_; };
-    const float& GetExpectPosition(void) { return motor_controller_conf_.target_position_; };
+    const float& GetExpectAngle(void) {
+        return motor_controller_conf_.target_angle_;
+    };
+    const float& GetExpectTorque(void) {
+        return motor_controller_conf_.target_torque_;
+    };
+    const float& GetExpectVelocity(void) {
+        return motor_controller_conf_.target_velocity_;
+    };
+    const float& GetExpectPosition(void) {
+        return motor_controller_conf_.target_position_;
+    };
 
-    const uint32_t GetFaultCode(void) { return motor_status_.fault_code_; };
+    const uint32_t GetFaultCode(void) {
+        return motor_status_.fault_code_;
+    };
 
-    void SetAngle(float angle) { motor_controller_conf_.target_angle_ = angle; };
-    void SetTorque(float torque) { motor_controller_conf_.target_torque_ = std::clamp(torque, -motor_conf_.stal_torque_, motor_conf_.stal_torque_); };
-    void SetVelocity(float velocity) { motor_controller_conf_.target_velocity_ = std::clamp(velocity, -motor_conf_.max_rpm_, motor_conf_.max_rpm_); };
-    void SetPosition(float position) { motor_controller_conf_.target_position_ = position; };
+    void SetControlType(enum MotorControlType type) {
+        motor_control_type_ = type;
+    };
 
-    float GetVBusMeasured(void) { return motor_controller_conf_.vbus_measured_; };
-    void SetVBusMeasured(float vbus) { motor_controller_conf_.vbus_measured_ = vbus; };
+    void SetAngle(float angle) {
+        motor_controller_conf_.target_angle_ = angle;
+    };
+    void SetTorque(float torque) {
+        motor_controller_conf_.target_torque_ = \
+        std::clamp(torque, -motor_conf_.stal_torque_, motor_conf_.stal_torque_);
+    };
+    void SetVelocity(float velocity) {
+        motor_controller_conf_.target_velocity_ = \
+        std::clamp(velocity, -motor_conf_.max_velocity_, motor_conf_.max_velocity_);
+    };
+    void SetPosition(float position) {
+        motor_controller_conf_.target_position_ = position;
+    };
 
-    void SendMotorControlEvent(enum MotorControlEvent event) {fsm_.Event(event); };
+    float GetVBusMeasured(void) {
+        return motor_controller_conf_.vbus_measured_;
+    };
+    void SetVBusMeasured(float vbus) {
+        motor_controller_conf_.vbus_measured_ = vbus;
+    };
+
+    MotorConfig_t& GetConfig(void) {
+        return motor_conf_;
+    };
+    const MotorStatus_t& GetStatus(void) const {
+        return motor_status_;
+    };
+    MotorControllerConfig_t& GetControllerConfig(void) {
+        return motor_controller_conf_;
+    };
+
+    void SendMotorControlEvent(enum MotorControlEvent event) {
+        fsm_.Event(event);
+    };
 
   public:
     virtual void MotorStart(void) = 0;
@@ -154,6 +200,7 @@ class MotorAbstract
   protected:
     enum MotorType motor_type_;
     enum MotorControlType motor_control_type_;
+
     MotorConfig_t motor_conf_;
     MotorStatus_t motor_status_;
     MotorControllerConfig_t motor_controller_conf_;

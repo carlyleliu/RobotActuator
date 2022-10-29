@@ -14,6 +14,8 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(RobotActuator)
 
+zephyr_include_directories(app/Inc)
+
 set(UTIL_PATH util)
 set(HAL_PATH hal)
 set(DEVICE_PATH device)

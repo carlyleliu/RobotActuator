@@ -118,15 +118,7 @@ uint16_t LinearHallAngleEncoder::LinearHallSensorGetAngle(void)
     std::clamp(hall_sin, -1.0f, 1.0f);
     std::clamp(hall_cos, -1.0f, 1.0f);
 
-    normalized_angle_measure_ = atan2f(hall_sin, hall_cos) * kRad2Deg_;
-
-    if (normalized_angle_measure_ < 0) {
-        normalized_angle_measure_ += 360.0f;
-    }
-
-    phase_measure_ = normalized_angle_measure_ / 360.0f * 65536;
-
-    return phase_measure_;
+    return atan2f(hall_sin, hall_cos);
 }
 
 /**

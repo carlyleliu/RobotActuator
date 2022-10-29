@@ -1,11 +1,14 @@
 #include <bldc_motor.hpp>
 #include <algorithm_utils.hpp>
 
-LOG_MODULE_REGISTER(BldcMotorControl, 3);
+LOG_MODULE_REGISTER(BldcMotorControl, 2);
 
 BldcMotor::BldcMotor() :
     MotorAbstract(),
     bldc_type_(BLDC_GIMBAL),
+    enable_current_control_(false),
+    v_dq_target_({0.0f, 0.0f}),
+    i_dq_target_({0.0f, 0.0f}),
     r_wl_ff_enable(false),
     bemf_ff_enable_(false)
 {
@@ -56,20 +59,6 @@ BldcMotor::BldcMotor() :
 
     };
     fsm_.Bind(MOTOR_CONTROL_TYPE_IDLE, MOTOR_CONTROL_EVENT_SET_POSITION) = [&](const Fsm::fsm_args &args) {
-
-    };
-
-    /* ol state event to other state */
-    fsm_.Bind(MOTOR_CONTROL_TYPE_OL, MOTOR_CONTROL_TYPE_IDLE) = [&](const Fsm::fsm_args &args) {
-
-    };
-    fsm_.Bind(MOTOR_CONTROL_TYPE_OL, MOTOR_CONTROL_EVENT_SET_SPEES) = [&](const Fsm::fsm_args &args) {
-
-    };
-    fsm_.Bind(MOTOR_CONTROL_TYPE_OL, MOTOR_CONTROL_EVENT_SET_TORQUE) = [&](const Fsm::fsm_args &args) {
-
-    };
-    fsm_.Bind(MOTOR_CONTROL_TYPE_OL, MOTOR_CONTROL_EVENT_SET_POSITION) = [&](const Fsm::fsm_args &args) {
 
     };
 
@@ -135,33 +124,18 @@ void BldcMotor::MotorStop(void)
 
 void BldcMotor::MotorRun(void)
 {
-    auto [tA, tB, tC, success] = foc_.Update();
-
-    if (success) {
-        pwm_phase_u_ = tA;
-        pwm_phase_v_ = tB;
-        pwm_phase_w_ = tC;
-    } else {
-        LOG_ERR("foc exec failed pwm[%f %f %f]\n", tA, tB, tC);
-    }
+    FocControl();
 }
 
 void BldcMotor::MotorTask(void)
 {
-    std::optional<float> phase_measure = phase_measure_.GetPresent();
-    std::optional<float> phase_velocity_measure = phase_velocity_measure_.GetPresent();
-
-    foc_.SetPhaseAngle(*phase_measure);
-    foc_.SetPhaseVelocity(*phase_velocity_measure);
-
     if (motor_control_type_ >= MOTOR_CONTROL_TYPE_POSITION) {
         PositionControl();
     }
     if (motor_control_type_ >= MOTOR_CONTROL_TYPE_SPEES) {
         SpeedControl();
     }
-    if (motor_control_type_ >= MOTOR_CONTROL_TYPE_TORQUE || \
-        motor_control_type_ >= MOTOR_CONTROL_TYPE_OL) {
+    if (motor_control_type_ >= MOTOR_CONTROL_TYPE_TORQUE && bldc_type_ != BLDC_GIMBAL) {
         TorqueControl();
     }
 
@@ -195,22 +169,33 @@ void BldcMotor::PositionControl(void)
  */
 void BldcMotor::SpeedControl(void)
 {
-    std::optional<float> velocity_measure = velocity_measure_.GetPresent();
+    std::optional<float> velocity_measure = velocity_measure_.GetPresent().value_or(0);
+    velocity_estimate_ = *velocity_measure;
 
     if (velocity_measure > motor_controller_conf_.velocity_limit_tolerance_ * motor_conf_.max_velocity_) {
         motor_status_.over_velocity_ = true;
         return;
     }
 
-    float velocity_err = motor_controller_conf_.target_velocity_ - *velocity_measure;
+    float velocity_err = motor_controller_conf_.target_velocity_ - velocity_estimate_;
 
     velocity_err = std::clamp(velocity_err, \
                     -motor_controller_conf_.max_velocity_ramp_, motor_controller_conf_.max_velocity_ramp_);
 
-    motor_controller_conf_.target_torque_ = velocity_pid_.PIDController(velocity_err);
-
-    motor_controller_conf_.target_torque_ = std::clamp(motor_controller_conf_.target_torque_,\
+    if (bldc_type_ == BLDC_GIMBAL) {
+        float vd = 0.0f;
+        float vq = 0.0f;
+        vq = velocity_pid_.PIDController(velocity_err);
+        vq = std::clamp(vq, -motor_conf_.nominal_voltage_/2, motor_conf_.nominal_voltage_/2);
+        v_dq_target_ = {vd, vq};
+    } else {
+        motor_controller_conf_.target_torque_ = velocity_pid_.PIController(velocity_err);
+        motor_controller_conf_.target_torque_ = std::clamp(motor_controller_conf_.target_torque_,\
                                              -motor_conf_.stal_torque_, motor_conf_.stal_torque_);
+    }
+
+    LOG_INF("velocity = %f %f, torque = %f velocity_err = %f\n", \
+             *velocity_measure, velocity_estimate_, motor_controller_conf_.target_torque_, velocity_err);
 }
 
 /**
@@ -242,7 +227,7 @@ void BldcMotor::TorqueControl(void)
     float vd = 0.0f;
     float vq = 0.0f;
 
-    std::optional<float> phase_vel = phase_velocity_measure_.GetPresent();
+    std::optional<float> phase_vel = velocity_measure_.GetPresent().value_or(0) * motor_conf_.pole_pairs_;
 
     if (r_wl_ff_enable) {
         if (!phase_vel.has_value()) {
@@ -270,6 +255,74 @@ void BldcMotor::TorqueControl(void)
         v_dq_target_ = {vd, vq};
     }
 
-    foc_.SetIdq(i_dq_target_);
-    foc_.SetVdq(v_dq_target_);
+    LOG_INF("vd = %f vq = %f\n", vd + id, vq + iq);
+}
+
+/**
+ * @brief current controller update
+ *
+ */
+int BldcMotor::FocControl(void)
+{
+    std::optional<float2D> v_dq;
+    float phase = normalize_angle_measure_.GetPresent().value_or(0) * motor_conf_.pole_pairs_;
+    float phase_velocity = velocity_measure_.GetPresent().value_or(0) * motor_conf_.pole_pairs_;
+
+    control_time_ = time();
+    //float predict_theta = phase + phase_velocity * (control_time_ - *sensor_update_time_.GetPresent());
+    float predict_theta = phase;
+
+    float mod_to_v = (2.0f / 3.0f) * motor_controller_conf_.vbus_measured_;
+    float v_to_mod = 1.0f / mod_to_v;
+
+    float mod_d, mod_q;
+
+    auto [v_d, v_q] = *v_dq_target_;
+
+    if (IsEnableCurrentControl()) {
+        foc_.FocClark(current_measure_.GetPresent());
+        foc_.FocPark(predict_theta);
+
+        std::optional<float2D> i_dq_measure = foc_.GetIqdMeasure();
+
+        auto [id_target, iq_target] = *i_dq_target_;
+        auto [id_measure, iq_measure] = *i_dq_measure;
+
+        float i_err_d = id_target - id_measure;
+        float i_err_q = iq_target - iq_measure;
+
+        mod_d = v_to_mod * (v_d + current_d_axis_pid_controller_.PIController(i_err_d));
+        mod_q = v_to_mod * (v_q + current_q_axis_pid_controller_.PIController(i_err_q));
+
+        float mod_scalefactor = 0.80f * kSqrt3Div2_ * 1.0f / std::sqrt(mod_d * mod_d + mod_q * mod_q);
+
+        if (mod_scalefactor < 1.0f) {
+            mod_d *= mod_scalefactor;
+            mod_q *= mod_scalefactor;
+        }
+    } else {
+        mod_d = v_to_mod * v_d;
+        mod_q = v_to_mod * v_q;
+    }
+
+    v_dq = {
+        mod_d,
+        mod_q
+    };
+
+    LOG_DBG("mod_to_v = %f v_dq[%f %f]\n", mod_to_v, mod_d, mod_q);
+
+    foc_.FocRevPark(v_dq, predict_theta);
+
+    auto [tA, tB, tC, success] = foc_.FocSVM();
+
+    if (success) {
+        pwm_phase_u_ = tA;
+        pwm_phase_v_ = tB;
+        pwm_phase_w_ = tC;
+    } else {
+        LOG_ERR("foc exec failed pwm[%f %f %f]\n", tA, tB, tC);
+    }
+
+    return 0;
 }

@@ -12,6 +12,7 @@ class MotorFactory
     virtual BldcMotor& Create(void) = 0;
 
   protected:
+    bool created;
     BldcMotor* motor_;
 };
 

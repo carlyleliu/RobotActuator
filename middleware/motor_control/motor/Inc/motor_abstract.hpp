@@ -49,21 +49,26 @@ enum MotorControlEvent
 typedef struct MotorConfig
 {
     uint8_t pole_pairs_;
+
     /* torque param */
     float torque_constant_;     // N.M/A
     float nominal_torque_;      // N.M
     float stal_torque_;         // N.M
+
     /* velocity param */
     float velocity_constant_;   //rpm/V
     float nominal_velocity_;    //rpm
     float max_velocity_;        //rpm
+
     /* voltage resistance inductance */
     float phase_inductance_;    //mH
     float phase_resistance_;    //o
     float nominal_voltage_;     //V
+
     /* current */
     float nominal_current_;     //A
     float stal_current_;        //A
+
     /* rotor and tempersture */
     float rotor_inertia_;       //fcm^2
     float max_demagnetize_tempersture_;
@@ -104,10 +109,10 @@ class MotorAbstract
 {
   public:
     MotorAbstract():
-        time_(0.0f),
-        sensor_update_time_(0.0f),
-        v_dq_target_({0.0f, 0.0f}),
-        i_dq_target_({0.0f, 0.0f}),
+        control_time_(0.0f),
+        position_estimate_(0.0f),
+        velocity_estimate_(0.1f),
+        normalize_angle_estimate_(0.0f),
         pwm_phase_u_(0.0f),
         pwm_phase_v_(0.0f),
         pwm_phase_w_(0.0f)
@@ -129,7 +134,8 @@ class MotorAbstract
         return motor_controller_conf_.actual_torque_;
     };
     const float& GetMeasureVelocity(void) {
-        return motor_controller_conf_.actual_velocity_; };
+        return motor_controller_conf_.actual_velocity_;
+    };
     const float& GetMeasurePosition(void) {
         return motor_controller_conf_.actual_position_;
     };
@@ -201,27 +207,26 @@ class MotorAbstract
     enum MotorType motor_type_;
     enum MotorControlType motor_control_type_;
 
+    float control_time_;
+
     MotorConfig_t motor_conf_;
     MotorStatus_t motor_status_;
     MotorControllerConfig_t motor_controller_conf_;
 
-    float time_;
-    float sensor_update_time_;
+    float position_estimate_;
+    float velocity_estimate_;
+    float normalize_angle_estimate_;
 
-    std::optional<float2D> v_dq_target_; // fed to the FOC
-    std::optional<float2D> i_dq_target_; // fed to the FOC
     Fsm::StateMachine fsm_;
 
   public:
     /* Inputs */
-    InputPort<float> position_estimate_;
     InputPort<float> position_measure_;
-
-    InputPort<float> velocity_estimate_;
     InputPort<float> velocity_measure_;
+    InputPort<float> normalize_angle_measure_;
 
-    InputPort<float> phase_measure_;
-    InputPort<float> phase_velocity_measure_;
+    InputPort<float> sensor_update_time_;
+    InputPort<float2D> current_measure_;
 
     /* Output */
     OutputPort<float> pwm_phase_u_;

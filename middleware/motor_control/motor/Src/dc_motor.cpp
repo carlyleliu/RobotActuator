@@ -6,7 +6,6 @@
  *  @return None
  */
 DcMotor::DcMotor() :
-    MotorAbstract(),
     positive_pwm_(0),
     negative_pwm_(0)
 {

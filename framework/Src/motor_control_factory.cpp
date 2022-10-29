@@ -2,6 +2,7 @@
 
 PM3505::PM3505()
 {
+    created = false;
     motor_ = new(BldcMotor);
 }
 
@@ -17,17 +18,17 @@ PM3505::~PM3505()
  */
 BldcMotor& PM3505::Create(void)
 {
+    if (created) {
+        return *motor_;
+    }
     MotorConfig_t& conf = motor_->GetConfig();
     MotorControllerConfig_t& controller = motor_->GetControllerConfig();
 
-    PidController& torque_pid = motor_->GetTorquePidHandler();
     PidController& velocity_pid = motor_->GetVelocityPidHandler();
     PidController& position_pid = motor_->GetPositionPidHandler();
 
-    PidController& q_axis_pid = motor_->GetQAxisPidHandler();
-    PidController& d_axis_pid = motor_->GetDAxisPidHandler();
-
-    FieldOrientedController& foc = motor_->GetFocHandle();
+    PidController& q_axis_pid = motor_->GetQAxisCurrentPidHandler();
+    PidController& d_axis_pid = motor_->GetDAxisCurrentPidHandler();
 
     conf.pole_pairs_ = 11;
     conf.torque_constant_ = 0.09;
@@ -57,15 +58,11 @@ BldcMotor& PM3505::Create(void)
     controller.actual_torque_ = 0;
     controller.actual_velocity_ = 0;
     controller.actual_position_ = 0;
-    controller.vbus_measured_ = 0;
+    controller.vbus_measured_ = 12;
 
-    torque_pid.SetKp(10);
-    torque_pid.SetKi(0.2);
-    torque_pid.SetKd(0.05);
-
-    velocity_pid.SetKp(10);
-    velocity_pid.SetKi(0.2);
-    velocity_pid.SetKd(0.05);
+    velocity_pid.SetKp(0.01);
+    velocity_pid.SetKi(0.001);
+    velocity_pid.SetKd(0.0);
 
     position_pid.SetKp(10);
     position_pid.SetKi(0.2);
@@ -79,8 +76,7 @@ BldcMotor& PM3505::Create(void)
     d_axis_pid.SetKi(0.2);
     d_axis_pid.SetKd(0.05);
 
-    foc.DisableCurrentControl();
-    foc.SetVbus(conf.nominal_voltage_);
+    created = true;
 
     return *motor_;
 }

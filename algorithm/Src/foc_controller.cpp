@@ -5,26 +5,7 @@
 
 LOG_MODULE_REGISTER(FOC, 3);
 
-/**
- * @brief set phase current in current loop
- *
- * @param current value for 3 phase
- * @param num numer of phase
- * @return 0 if success and -1 failed
- */
-int FieldOrientedController::SetPhaseCurrent(float* current, int num)
-{
-    if (num < 0 || num >3 || nullptr == current) {
-        return -1;
-    }
-
-    for (int idx = 0; idx < num; idx++) {
-        (*currents_measured_)[idx] = current[idx];
-    }
-
-    return 0;
-}
-
+#if 0
 /**
  * @brief  This function transforms stator values a and b (which are
  *         directed along axes each displaced by 120 degrees) into values
@@ -37,17 +18,37 @@ void FieldOrientedController::FocClark(void)
 {
     // Clarke transform
     if (currents_measured_.has_value()) {
-        if (2 == current_phase_num_) {
+        if (3 == current_phase_num_) {
             i_alpha_beta_measured_ = {
                 (*currents_measured_)[0],
                 kDivSqrt3_ * ((*currents_measured_)[1] - (*currents_measured_)[2])
             };
-        } else if (3 == current_phase_num_) {
+        } else if (2 == current_phase_num_) {
             i_alpha_beta_measured_ = {
                 (*currents_measured_)[0],
                 kDivSqrt3_ * (-2 * (*currents_measured_)[1] - (*currents_measured_)[0])
             };
         }
+    }
+}
+#endif
+
+/**
+ * @brief  This function transforms stator values a and b (which are
+ *         directed along axes each displaced by 120 degrees) into values
+ *         alpha and beta in a stationary qd reference frame.
+ *                               alpha = a
+ *                       beta = -(2*b+a)/sqrt(3)
+ * @retval Stator values alpha and beta in alphabeta_t format
+ */
+void FieldOrientedController::FocClark(std::optional<float2D> current)
+{
+    // Clarke transform
+    if (current.has_value()) {
+        i_alpha_beta_measured_ = {
+            current->first,
+            kDivSqrt3_ * (-2 * current->second - current->first)
+        };
     }
 }
 
@@ -60,10 +61,8 @@ void FieldOrientedController::FocClark(void)
  * @param  theta: rotating frame angular position
  * @retval Stator values q and d in qd_t format
  */
-void FieldOrientedController::FocPark(void)
+void FieldOrientedController::FocPark(float theta)
 {
-    float theta = phase_measure_ + phase_velocity_measure_ *  (control_time_ - sensor_update_time_);
-
     if (i_alpha_beta_measured_.has_value()) {
         auto [i_alpha, i_beta] = *i_alpha_beta_measured_;
         float cos_theta = arm_cos_f32(theta);
@@ -84,10 +83,8 @@ void FieldOrientedController::FocPark(void)
  * @param  theta: rotating frame angular position
  * @retval Stator voltage Valpha and Vbeta in qd_t format
  */
-void FieldOrientedController::FocRevPark(std::optional<float2D> v_dq)
+void FieldOrientedController::FocRevPark(std::optional<float2D> v_dq, float theta)
 {
-    float theta = phase_measure_;// + phase_velocity_measure_ *  (control_time_ - sensor_update_time_);
-
     auto [mod_d, mod_q] = *v_dq;
 
     float cos_theta = arm_cos_f32(theta);
@@ -225,57 +222,6 @@ std::tuple<float, float, float, bool> FieldOrientedController::FocSVM(void)
             tA >= 0.0f && tA <= 1.0f
          && tB >= 0.0f && tB <= 1.0f
          && tC >= 0.0f && tC <= 1.0f;
+
     return {tA, tB, tC, result_valid};
-}
-
-/**
- * @brief current controller update
- *
- */
-std::tuple<float, float, float, bool> FieldOrientedController::Update(void)
-{
-    std::optional<float2D> v_dq;
-    float mod_to_v = (2.0f / 3.0f) * vbus_measure_;
-    float v_to_mod = 1.0f / mod_to_v;
-
-    float mod_d, mod_q;
-
-    control_time_ = time();
-
-    if (IsEnableCurrentControl()) {
-        FocClark(); // get i_alpha_beta_measured_
-        FocPark(); // get i_dq_measured_
-    }
-
-    auto [id_target, iq_target] = *i_dq_target_;
-    auto [id_measure, iq_measure] = *i_dq_measured_;
-
-    float i_err_d = id_target - id_measure;
-    float i_err_q = iq_target - iq_measure;
-
-    auto [v_d, v_q] = *v_dq_target_;
-
-    if (IsEnableCurrentControl()) {
-        mod_d = v_to_mod * (v_d + current_d_axis_pid_controller_.PIController(i_err_d));
-        mod_q = v_to_mod * (v_q + current_q_axis_pid_controller_.PIController(i_err_q));
-
-        float mod_scalefactor = 0.80f * kSqrt3Div2_ * 1.0f / std::sqrt(mod_d * mod_d + mod_q * mod_q);
-
-        if (mod_scalefactor < 1.0f) {
-            mod_d *= mod_scalefactor;
-            mod_q *= mod_scalefactor;
-        }
-    } else {
-        mod_d = v_to_mod * v_d;
-        mod_q = v_to_mod * v_q;
-    }
-
-    v_dq = {
-        mod_d,
-        mod_q
-    };
-
-    FocRevPark(v_dq);
-
-    return FocSVM();
 }
